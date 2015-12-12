@@ -1,6 +1,6 @@
-#include "factory.h"
-
 #include "api_foo.h"
+
+#include "factory.h"
 
 #include <iostream>
 #include <typeinfo>
@@ -64,33 +64,49 @@ public:
 };
 }
 
-
 template<class T>
 void register_constructors(api::foo_factory& factory)
 {
-   factory.register_functions(typeid(T).name(),
-                              []()
-                              {
-                                 return new T();
-                              },
-                              [](int a, float b)
-                              {
-                                 return new T(a, b);
-                              });
+   factory.register_function(typeid(testing::mock_foo).name(),
+                             []() { return new T(); });
+
+   factory.register_function(typeid(testing::mock_foo).name(),
+                             [](int a, float b) { return new T(a, b); });
+
+   //factory.register_functions(typeid(T).name(),
+   //                           []()
+   //                           {
+   //                              return new T();
+   //                           },
+   //                           [](int a, float b)
+   //                           {
+   //                              return new T(a, b);
+   //                           });
 }
 
 template<>
 void register_constructors<testing::mock_foo>(api::foo_factory& factory)
 {
-   factory.register_functions(typeid(testing::mock_foo).name(),
-                              []()
-                              {
-                                 return new testing::mock_foo();
-                              },
-                              [](int a, float b)
-                              {
-                                 return new testing::mock_foo();
-                              });
+   //factory.register_functions(typeid(testing::mock_foo).name(),
+   //                           std::function<api::foo* ()>([]() { return new testing::mock_foo(); }),
+   //                           std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
+
+   factory.register_function(typeid(testing::mock_foo).name(),
+                             []() { return new testing::mock_foo(); });
+
+   factory.register_function(typeid(testing::mock_foo).name(),
+                             [](int, float) { return new testing::mock_foo(); });
+
+
+   //factory.register_functions(typeid(testing::mock_foo).name(),
+   //                           []()
+   //                           {
+   //                              return new testing::mock_foo();
+   //                           },
+   //                           [](int a, float b)
+   //                           {
+   //                              return new testing::mock_foo();
+   //                           });
 }
 
 
@@ -99,19 +115,20 @@ void test_factory(api::foo_factory& factory)
 {
    const std::string key = typeid(T).name();
 
-   std::unique_ptr<api::foo> yyz(factory.f1.create(key));
+//   const auto& factory.get_function<std::function<api::foo* ()>>
+   std::unique_ptr<api::foo> yyz(factory.construct<std::function<api::foo* ()>>(key));
    if (yyz != nullptr) yyz->do_it();
 
-   yyz.reset(factory.f2.create(key, 5, 5.0f));
-   if (yyz != nullptr) yyz->do_it();
+   //yyz.reset(factory.construct<api::foo* (int, float)>(key, 5, 5.0f));
+   //if (yyz != nullptr) yyz->do_it();
 
    factory.unregister_functions(key);
 
-   yyz.reset(factory.f1.create(key));
+   yyz.reset(factory.construct<std::function<api::foo* ()>>(key));
    if (yyz != nullptr) yyz->do_it();
 
-   yyz.reset(factory.f2.create(key, 5, 5.0f));
-   if (yyz != nullptr) yyz->do_it();
+   //yyz.reset(factory.construct<api::foo* (int, float)>(key, 5, 5.0f));
+   //if (yyz != nullptr) yyz->do_it();
 }
 
 int main()
