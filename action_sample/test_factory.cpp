@@ -67,11 +67,11 @@ public:
 template<class T>
 void register_constructors(api::foo_factory& factory)
 {
-   factory.register_function(typeid(testing::mock_foo).name(),
-                             []() { return new T(); });
+   factory.register_function(typeid(T).name(),
+                             std::function<api::foo* ()>([]() { return new T(); }));
 
-   factory.register_function(typeid(testing::mock_foo).name(),
-                             [](int a, float b) { return new T(a, b); });
+   factory.register_function(typeid(T).name(),
+                             std::function<api::foo* (int, float)>([](int a, float b) { return new T(a, b); }));
 
    //factory.register_functions(typeid(T).name(),
    //                           []()
@@ -92,10 +92,10 @@ void register_constructors<testing::mock_foo>(api::foo_factory& factory)
    //                           std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
 
    factory.register_function(typeid(testing::mock_foo).name(),
-                             []() { return new testing::mock_foo(); });
+                             std::function<api::foo* ()>([]() { return new testing::mock_foo(); }));
 
    factory.register_function(typeid(testing::mock_foo).name(),
-                             [](int, float) { return new testing::mock_foo(); });
+                             std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
 
 
    //factory.register_functions(typeid(testing::mock_foo).name(),
@@ -119,16 +119,16 @@ void test_factory(api::foo_factory& factory)
    std::unique_ptr<api::foo> yyz(factory.construct<std::function<api::foo* ()>>(key));
    if (yyz != nullptr) yyz->do_it();
 
-   //yyz.reset(factory.construct<api::foo* (int, float)>(key, 5, 5.0f));
-   //if (yyz != nullptr) yyz->do_it();
+   yyz.reset(factory.construct<std::function<api::foo* (int, float)>>(key, 5, 5.0f));
+   if (yyz != nullptr) yyz->do_it();
 
    factory.unregister_functions(key);
 
    yyz.reset(factory.construct<std::function<api::foo* ()>>(key));
    if (yyz != nullptr) yyz->do_it();
 
-   //yyz.reset(factory.construct<api::foo* (int, float)>(key, 5, 5.0f));
-   //if (yyz != nullptr) yyz->do_it();
+   yyz.reset(factory.construct<std::function<api::foo* (int, float)>>(key, 5, 5.0f));
+   if (yyz != nullptr) yyz->do_it();
 }
 
 int main()
