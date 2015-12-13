@@ -62,6 +62,26 @@ public:
       std::cout << "Inside the " << typeid(*this).name() << " class." << std::endl;
    }
 };
+
+class madison : virtual public api::foo
+{
+public:
+   madison() = default;
+   madison(int a, float b) : _a(a), _b(b)
+   {
+   }
+
+   virtual void do_it()
+   {
+      for (decltype(_a) i = 0; i < _a; i++)
+      {
+         std::cout << "madison, i love you!!!" << std::endl;
+      }
+   }
+
+   int _a = 1;
+   float _b = 1.0f;
+};
 }
 
 template<class T>
@@ -157,10 +177,12 @@ int main()
    register_constructors<testing::my_foo>(factory);
    register_constructors<testing::your_foo>(factory);
    register_constructors<testing::mock_foo>(factory);
+   register_constructors<testing::madison>(factory);
 
    test_factory<testing::my_foo>(factory);
    test_factory<testing::your_foo>(factory);
    test_factory<testing::mock_foo>(factory);
+   test_factory<testing::madison>(factory);
 
    return 0;
 }
