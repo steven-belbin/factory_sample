@@ -91,30 +91,8 @@ public:
    ///   Get a specific function by its signature.
    /// </summary>
    ///
-   template<int index_t>
-   auto& get_function()
-   {
-      return std::get<index_t>(_functions);
-   }
-
-   ///
-   /// <summary>
-   ///   Get a specific function by its signature.
-   /// </summary>
-   ///
-   template<int index_t>
-   const auto& get_function() const
-   {
-      return std::get<index_t>(_functions);
-   }
-
-   ///
-   /// <summary>
-   ///   Get a specific function by its signature.
-   /// </summary>
-   ///
    template<class function_t>
-   auto& get_function()
+   decltype(auto) get_function() const
    {
       return std::get<function_t>(_functions);
    }
@@ -124,10 +102,10 @@ public:
    ///   Get a specific function by its signature.
    /// </summary>
    ///
-   template<class function_t>
-   const auto& get_function() const
+   template<int index_t>
+   decltype(auto) get_function() const
    {
-      return std::get<function_t>( _functions);
+      return std::get<index_t>(_functions);
    }
 
    ///
@@ -140,7 +118,6 @@ public:
    template<class function_t>
    void register_function(const function_t& function)
    {
-      // get_function<function_t>() = function;
       std::get<function_t>(_functions) = function;
    }
 
@@ -151,12 +128,11 @@ public:
    ///
    /// <param name="function">The function signature that is to be registered.</param>
    ///
-   //template<class function_t>
-   //void register_function(function_t&& function)
-   //{
-   //   get_function<function_t>().swap(function);
-   //   std::get<function_t>(_functions) = function_t(function);
-   //}
+   template<class function_t>
+   void register_function(function_t&& function)
+   {
+      std::get<function_t>(_functions).swap(function);
+   }
 
    ///
    /// <summary>
@@ -171,6 +147,17 @@ public:
 
    ///
    /// <summary>
+   ///   Unregisters a specific function by its signature.
+   /// </summary>
+   ///
+   template<int index_t>
+   void unregister_function()
+   {
+      register_function<index_t>(nullptr);
+   }
+
+   ///
+   /// <summary>
    ///   Invoke a specific function by its signature.
    /// </summary>
    ///
@@ -179,11 +166,26 @@ public:
    /// <exception cref="std::bad_function_call">When there is no valid function with this signature which is registered with the given key.</exception>
    ///
    template<class function_t, class... args_t>
-   auto invoke(args_t&&... args)
+   decltype(auto) invoke(args_t&&... args)
    {
       return get_function<function_t>()(std::forward<args_t>(args)...);
    }
-    
+
+   ///
+   /// <summary>
+   ///   Invoke a specific function by its signature.
+   /// </summary>
+   ///
+   /// <param name="args">The function arguments to pass to the function.</param>
+   ///
+   /// <exception cref="std::bad_function_call">When there is no valid function with this signature which is registered with the given key.</exception>
+   ///
+   template<int index_t, class... args_t>
+   decltype(auto) invoke(args_t&&... args)
+   {
+      return get_function<index_t>()(std::forward<args_t>(args)...);
+   }
+
 private:
    function_types _functions;
 };
@@ -298,29 +300,30 @@ public:
    template<class function_t>
    void unregister_function(const key_type& key)
    {
-      const auto& it = _delegates.find(key);
+      const auto& delegate_iter = _delegates.find(key);
 
-      if (it != cend(_delegates))
+      if (delegate_iter != cend(_delegates))
       {
-         it->second.unregister_function<function_t>();
+         delegate_iter->second.unregister_function<function_t>();
       }
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
+   ///   Unregisters a specific function by its signature that was registered under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key in which the function was registered under.</param>
    ///
    template<int index_t>
-   auto get_function(const key_type& key) const
+   void unregister_function(const key_type& key)
    {
-      const auto& it = _delegates.find(key);
+      const auto& delegate_iter = _delegates.find(key);
 
-      return (it != cend(_delegates))
-             ? it->second.get_function<index_t>()
-             : function_t(nullptr);
+      if (delegate_iter != cend(_delegates))
+      {
+         delegate_iter->second.unregister_function<index_t>();
+      }
    }
 
    ///
@@ -333,11 +336,28 @@ public:
    template<class function_t>
    auto get_function(const key_type& key) const
    {
-      const auto& it = _delegates.find(key);
+      const auto& delegate_iter = _delegates.find(key);
 
-      return (it != cend(_delegates))
-             ? it->second.get_function<function_t>()
-             : function_t(nullptr);
+      return (delegate_iter != std::cend(_delegates))
+             ? delegate_iter->second.get_function<function_t>()
+             : decltype(delegate_iter->second.get_function<function_t>())(nullptr);
+   }
+
+   ///
+   /// <summary>
+   ///   Get a specific function by its signature that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   ///
+   template<int index_t>
+   auto get_function(const key_type& key) const
+   {
+      const auto& delegate_iter = _delegates.find(key);
+
+      return (delegate_iter != std::cend(_delegates))
+             ? delegate_iter->second.get_function<index_t>()
+             : decltype(delegate_iter->second.get_function<index_t>())(nullptr);
    }
 
    ///
@@ -353,12 +373,31 @@ public:
    /// <seealso cref="delegate_functions::invoke" />
    ///
    template<class function_t, class... args_t>
-   auto invoke(const key_type& key,
-               args_t&&... args)
+   decltype(auto) invoke(const key_type& key,
+                         args_t&&... args) const
    {
       return _delegates.at(key).invoke<function_t>(std::move(args));
    }
-   
+
+   ///
+   /// <summary>
+   ///   Invoke a specific function by its signature that registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="args">The function arguments to pass to the function.</param>
+   ///
+   /// <exception cref="std::out_of_range">When there is no function registered with the given key.</exception>
+   ///
+   /// <seealso cref="delegate_functions::invoke" />
+   ///
+   template<int index_t, class... args_t>
+   decltype(auto) invoke(const key_type& key,
+                         args_t&&... args) const
+   {
+      return _delegates.at(key).invoke<index_t>(std::move(args));
+   }
+
 private:
    delegates_type _delegates;
 };
@@ -471,12 +510,12 @@ public:
    /// <param name="key">The unique identifying key to associate with this function.</param>
    /// <param name="function">The function that is to be registered.</param>
    ///
-   //template<class function_t>
-   //void register_function(const key_type& key,
-   //                       function_t&& function)
-   //{
-   //   _delegates.register_function(key, function);
-   //}
+   template<class function_t>
+   void register_function(const key_type& key,
+                          function_t&& function)
+   {
+      _delegates.register_function(key, function);
+   }
 
    ///
    /// <summary>
@@ -493,18 +532,15 @@ public:
 
    ///
    /// <summary>
-   ///   Constructs an instance of the class.
+   ///   Unregisters a specific function by its signature that was registered under the given key.
    /// </summary>
    ///
-   /// <see cref="key_delegates_functions::invoke"/>
-   ///
-   /// <returns>An instance of the class.<returns>
-   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
    ///
    template<int index_t>
-   auto get_function(const key_type& key) const
+   void unregister_function(const key_type& key)
    {
-      return _delegates.get_function<index_t>(key);
+      _delegates.unregister_function<index_t>(key);
    }
 
    ///
@@ -518,7 +554,7 @@ public:
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<class function_t>
-   auto get_function(const key_type& key) const
+   decltype(auto) get_function(const key_type& key) const
    {
       return _delegates.get_function<function_t>(key);
    }
@@ -533,15 +569,52 @@ public:
    /// <returns>An instance of the class.<returns>
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
+   template<int index_t>
+   decltype(auto) get_function(const key_type& key) const
+   {
+      return _delegates.get_function<index_t>(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Constructs an instance of the class.
+   /// </summary>
+   ///
+   /// <see cref="key_delegates_functions::invoke"/>
+   ///
+   /// <returns>An instance of the class.<returns>
+   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   ///
    template<class function_t, class... args_t>
-   typename function_t::result_type construct(const key_type& key,
-                                              args_t&&... args) const
+   auto construct(const key_type& key,
+                  args_t&&... args) const -> typename function_t::result_type
    {
       const auto& function = _delegates.get_function<function_t>(key);
 
       return (function)
              ? function(std::forward<args_t>(args)...)
              : nullptr;
+   }
+
+   ///
+   /// <summary>
+   ///   Constructs an instance of the class.
+   /// </summary>
+   ///
+   /// <see cref="key_delegates_functions::invoke"/>
+   ///
+   /// <returns>An instance of the class.<returns>
+   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   ///
+   template<int index_t, class... args_t>
+   auto construct(const key_type& key,
+                  args_t&&... args) const
+   {
+      const auto& function = _delegates.get_function<index_t>(key);
+
+      return (function)
+             ? function(std::forward<args_t>(args)...)
+             : decltype(function(std::forward<args_t>(args)...))(nullptr);
    }
 
 private:

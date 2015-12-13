@@ -109,30 +109,50 @@ void register_constructors<testing::mock_foo>(api::foo_factory& factory)
    //                           });
 }
 
-
-template<class T>
-void test_factory(api::foo_factory& factory)
+void test_constructors(const api::foo_factory& factory,
+                       const api::foo_factory::key_type& key)
 {
-   const std::string key = typeid(T).name();
-
-//   const auto& factory.get_function<std::function<api::foo* ()>>
-   std::unique_ptr<api::foo> yyz(factory.construct<std::function<api::foo* ()>>(key));
-   if (yyz != nullptr) yyz->do_it();
-
-   yyz.reset(factory.construct<std::function<api::foo* (int, float)>>(key, 5, 5.0f));
-   if (yyz != nullptr) yyz->do_it();
-
-   factory.unregister_functions(key);
+   std::unique_ptr<api::foo> yyz;
 
    yyz.reset(factory.construct<std::function<api::foo* ()>>(key));
    if (yyz != nullptr) yyz->do_it();
 
    yyz.reset(factory.construct<std::function<api::foo* (int, float)>>(key, 5, 5.0f));
    if (yyz != nullptr) yyz->do_it();
+
+   yyz.reset(factory.construct<0>(key));
+   if (yyz != nullptr) yyz->do_it();
+
+   yyz.reset(factory.construct<1>(key, 5, 5.0f));
+   if (yyz != nullptr) yyz->do_it();
+}
+
+template<class T>
+void test_factory(api::foo_factory& factory)
+{
+   const std::string key = typeid(T).name();
+
+   test_constructors(factory, key);
+   factory.unregister_functions(key);
+   test_constructors(factory, key);
 }
 
 int main()
 {
+   prgrmr::generic::delegate_functions<std::function<int (int)>,
+                                       std::function<char (char)>> delegate_fns;
+
+   delegate_fns.register_function(std::function<int (int)>([](int x) { return x; }));
+   delegate_fns.register_function(std::function<char (char)>([](char x) { return x; }));
+
+   int i = 10;
+   char c = 'c';
+
+   auto f1a = delegate_fns.get_function<std::function<int (int)>>();
+   auto f1b = delegate_fns.get_function<0>();
+
+   std::cout << delegate_fns.invoke<0>(i) << delegate_fns.invoke<1>(c) << std::endl;
+
    api::foo_factory factory;
    register_constructors<testing::my_foo>(factory);
    register_constructors<testing::your_foo>(factory);
