@@ -119,9 +119,9 @@ void register_constructors(api::foo_factory& factory)
 template<>
 void register_constructors<testing::mock_foo>(api::foo_factory& factory)
 {
-   factory.register_delegate(typeid(testing::mock_foo).name(),
-                             std::make_tuple(std::function<api::foo* ()>([]() { return new testing::mock_foo(); }),
-                                             std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); })));
+   //factory.register_delegate(typeid(testing::mock_foo).name(),
+   //                          std::make_tuple(std::function<api::foo* ()>([]() { return new testing::mock_foo(); }),
+   //                                          std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); })));
 
    //factory.register_function(typeid(testing::mock_foo).name(),
    //                          std::function<api::foo* ()>([]() { return new testing::mock_foo(); }));
@@ -169,59 +169,78 @@ void test_factory(api::foo_factory& factory)
    test_constructors(factory, key);
 }
 
+void test_delegate()
+{
+   //typedef int(*fn0)();
+   //typedef int(*fn1)(int, int);
+   //prgrmr::generic::delegate_functions<fn0, fn1> delegate_fns;
+
+
+   prgrmr::generic::delegate_functions<int(*)(),
+                                       int(*)(int, int)>
+      delegate_fns;
+
+   delegate_fns.register_function<0>([]() { return 10; });
+   delegate_fns.register_function<1>([](int a, int b) { return a + b; });
+
+   std::cout << delegate_fns.invoke<0>() << std::endl;
+   std::cout << delegate_fns.invoke<1>(10, 20) << std::endl;
+}
+
 int main()
 {
-   auto fn = ([](int x) { return x; });
+   //auto fn = ([](int x) { return x; });
 
-   prgrmr::generic::delegate_functions<std::function<int (int)>,
-                                       std::function<char (char)>> delegate_fns;
+   //prgrmr::generic::delegate_functions<std::function<int (int)>,
+   //                                    std::function<char (char)>> delegate_fns;
 
-   delegate_fns.register_function(std::function<int (int)>([](int x) { return x; }));
-   delegate_fns.register_function(std::function<char (char)>([](char x) { return x; }));
+   //delegate_fns.register_function(std::function<int (int)>([](int x) { return x; }));
+   //delegate_fns.register_function(std::function<char (char)>([](char x) { return x; }));
 
-   int i = 10;
-   char c = 'c';
+   //int i = 10;
+   //char c = 'c';
 
-   auto f1a = delegate_fns.get_function<std::function<int (int)>>();
-   auto f1b = delegate_fns.get_function<0>();
+   //auto f1a = delegate_fns.get_function<std::function<int (int)>>();
+   //auto f1b = delegate_fns.get_function<0>();
 
 
-   const std::string key = "butterfly";
+   //const std::string key = "butterfly";
 
-   using kd_type = prgrmr::generic::key_delegates_functions<std::string, std::function<void()>>;
+   //using kd_type = prgrmr::generic::key_delegates_functions<std::string, std::function<void()>>;
 
-   kd_type kd;
-   kd_type::delegate_type del;
-   del.register_function<0>([&key]() {std::cout << key << std::endl; });
+   //kd_type kd;
+   //kd_type::delegate_type del;
+   //del.register_function<0>([&key]() {std::cout << key << std::endl; });
 
-   kd.register_delegate(key, del);
-   decltype(auto) yyz = kd.get_delegate(key);
+   //kd.register_delegate(key, del);
+   //decltype(auto) yyz = kd.get_delegate(key);
 
-   if (yyz != nullptr)
-   {
-      std::cout << "A delegate was found for this key. key:" << key << std::endl;
-      yyz->invoke<0>();
-   }
-   else
-   {
-      std::cout << "No delegate was found for this key. key:" << key << std::endl;
-   }
+   //if (yyz != nullptr)
+   //{
+   //   std::cout << "A delegate was found for this key. key:" << key << std::endl;
+   //   yyz->invoke<0>();
+   //}
+   //else
+   //{
+   //   std::cout << "No delegate was found for this key. key:" << key << std::endl;
+   //}
 
-   std::cout << delegate_fns.invoke<0>(i) << delegate_fns.invoke<1>(c) << std::endl;
+   //std::cout << delegate_fns.invoke<0>(i) << delegate_fns.invoke<1>(c) << std::endl;
 
-   api::foo_factory factory;
-   register_constructors<testing::my_foo>(factory);
-   register_constructors<testing::your_foo>(factory);
-   register_constructors<testing::mock_foo>(factory);
-   register_constructors<testing::madison>(factory);
+   //api::foo_factory factory;
+   //register_constructors<testing::my_foo>(factory);
+   //register_constructors<testing::your_foo>(factory);
+   //register_constructors<testing::mock_foo>(factory);
+   //register_constructors<testing::madison>(factory);
 
-   test_factory<testing::my_foo>(factory);
-   test_factory<testing::your_foo>(factory);
-   test_factory<testing::mock_foo>(factory);
-   test_factory<testing::madison>(factory);
+   //test_factory<testing::my_foo>(factory);
+   //test_factory<testing::your_foo>(factory);
+   //test_factory<testing::mock_foo>(factory);
+   //test_factory<testing::madison>(factory);
 
-   ///xxx
+   /////xxx
 
+   test_delegate();
 
    return 0;
 }

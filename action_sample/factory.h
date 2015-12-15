@@ -9,6 +9,19 @@ namespace prgrmr
 {
 namespace generic
 {
+
+template<class function_t>
+function_t build_functions_type(function_t&& function)
+{
+   return std::move(function);
+}
+
+template<class... functions_t>
+std::tuple<functions_t...> build_functions_type(functions_t&&... functions)
+{
+   return std::make_tuple(build_functions_type<functions_t>(functions)...);
+}
+
 ///
 /// <summary>
 ///   The delegate_functions class is a function delegate that supports multiple functions but which different
@@ -27,22 +40,35 @@ public:
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
-   delegate_functions(delegate_functions&&) = default;
+   delegate_functions(delegate_functions&&) = delete;
 
    ~delegate_functions() = default;
 
    delegate_functions& operator=(const delegate_functions&) = default;
-   delegate_functions& operator=(delegate_functions&&) = default;
+   delegate_functions& operator=(delegate_functions&&) = delete;
 
-   ///
-   /// <summary>
-   ///   Constructs an instance and registers all possible functions.
-   /// </summary>
-   ///
-   /// <param name="functions">A container of all possible functions.</param>
-   ///
-   delegate_functions(const functions_type& functions)
-   : _functions(functions)
+   template<class function_t>
+   delegate_functions(function_t&& function)
+   {
+      std::get<function_t>(_functions) = std::move(function);
+   }
+
+   template<class function_t, class... functions_t>
+   delegate_functions(function_t&& function, functions_t&&... functions)
+   {
+      std::get<function_t>(_functions) = std::move(function);
+      delegate_functions<function_t>(functions...);
+   }
+
+   /////
+   ///// <summary>
+   /////   Constructs an instance and registers all possible functions.
+   ///// </summary>
+   /////
+   ///// <param name="functions">A container of all possible functions.</param>
+   /////
+   delegate_functions(functions_t&&... functions)
+   : _functions(build_functions_type(functions))
    {
    }
 
@@ -53,10 +79,34 @@ public:
    ///
    /// <param name="functions">A container of all possible functions.</param>
    ///
-   delegate_functions(functions_type&& functions)
-   : _functions(functions)
-   {
-   }
+   //delegate_functions(functions_t&&... functions)
+   //: _functions(functions)
+   //{
+   //}
+
+   ///
+   /// <summary>
+   ///   Constructs an instance and registers all possible functions.
+   /// </summary>
+   ///
+   /// <param name="functions">A container of all possible functions.</param>
+   ///
+   //delegate_functions(const functions_type& functions)
+   //: _functions(functions)
+   //{
+   //}
+
+   ///
+   /// <summary>
+   ///   Constructs an instance and registers all possible functions.
+   /// </summary>
+   ///
+   /// <param name="functions">A container of all possible functions.</param>
+   ///
+   //delegate_functions(functions_type&& functions)
+   //: _functions(functions)
+   //{
+   //}
 
    ///
    /// <summary>
@@ -130,7 +180,7 @@ public:
    /// <param name="function">The function signature that is to be registered.</param>
    ///
    template<class function_t>
-   void register_function(function_t function)
+   void register_function(function_t&& function)
    {
       std::get<function_t>(_functions) = std::move(function);
    }
