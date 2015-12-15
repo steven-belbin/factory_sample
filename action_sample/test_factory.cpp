@@ -220,5 +220,8 @@ int main()
    test_factory<testing::mock_foo>(factory);
    test_factory<testing::madison>(factory);
 
+   ///xxx
+
+
    return 0;
 }
