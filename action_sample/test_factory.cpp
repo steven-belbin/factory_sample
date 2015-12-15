@@ -87,35 +87,47 @@ public:
 template<class T>
 void register_constructors(api::foo_factory& factory)
 {
-   factory.register_function(typeid(T).name(),
-                             std::function<api::foo* ()>([]() { return new T(); }));
+   //api::foo_factory::delegate_type delegate
+   //(
+   //   std::make_tuple
+   //   (
+   //      std::function<api::foo*()>
+   //      (
+   //         []()
+   //         {
+   //            return new T();
+   //         }
+   //      ),
+   //      std::function<api::foo*(int, float)>
+   //      (
+   //         [](int a, float b)
+   //         {
+   //            return new T(a, b);
+   //         }
+   //      )
+   //   )
+   //);
 
-   factory.register_function(typeid(T).name(),
-                             std::function<api::foo* (int, float)>([](int a, float b) { return new T(a, b); }));
+   const api::foo_factory::key_type key = typeid(T).name();
 
-   //factory.register_functions(typeid(T).name(),
-   //                           []()
-   //                           {
-   //                              return new T();
-   //                           },
-   //                           [](int a, float b)
-   //                           {
-   //                              return new T(a, b);
-   //                           });
+   //factory.register_delegate(key, delegate);
+
+   factory.register_function(key, std::function<api::foo* ()>([]() -> api::foo* { return new T(); }));
+   factory.register_function(key, std::function<api::foo* (int, float)>([](int a, float b) -> api::foo* { return new T(a, b); }));
 }
 
 template<>
 void register_constructors<testing::mock_foo>(api::foo_factory& factory)
 {
-   //factory.register_functions(typeid(testing::mock_foo).name(),
-   //                           std::function<api::foo* ()>([]() { return new testing::mock_foo(); }),
-   //                           std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
+   factory.register_delegate(typeid(testing::mock_foo).name(),
+                             std::make_tuple(std::function<api::foo* ()>([]() { return new testing::mock_foo(); }),
+                                             std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); })));
 
-   factory.register_function(typeid(testing::mock_foo).name(),
-                             std::function<api::foo* ()>([]() { return new testing::mock_foo(); }));
+   //factory.register_function(typeid(testing::mock_foo).name(),
+   //                          std::function<api::foo* ()>([]() { return new testing::mock_foo(); }));
 
-   factory.register_function(typeid(testing::mock_foo).name(),
-                             std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
+   //factory.register_function(typeid(testing::mock_foo).name(),
+   //                          std::function<api::foo* (int, float)>([](int, float) { return new testing::mock_foo(); }));
 
 
    //factory.register_functions(typeid(testing::mock_foo).name(),
@@ -153,12 +165,14 @@ void test_factory(api::foo_factory& factory)
    const std::string key = typeid(T).name();
 
    test_constructors(factory, key);
-   factory.unregister_functions(key);
+   factory.unregister_delegate(key);
    test_constructors(factory, key);
 }
 
 int main()
 {
+   auto fn = ([](int x) { return x; });
+
    prgrmr::generic::delegate_functions<std::function<int (int)>,
                                        std::function<char (char)>> delegate_fns;
 
@@ -170,6 +184,28 @@ int main()
 
    auto f1a = delegate_fns.get_function<std::function<int (int)>>();
    auto f1b = delegate_fns.get_function<0>();
+
+
+   const std::string key = "butterfly";
+
+   using kd_type = prgrmr::generic::key_delegates_functions<std::string, std::function<void()>>;
+
+   kd_type kd;
+   kd_type::delegate_type del;
+   del.register_function<0>([&key]() {std::cout << key << std::endl; });
+
+   kd.register_delegate(key, del);
+   decltype(auto) yyz = kd.get_delegate(key);
+
+   if (yyz != nullptr)
+   {
+      std::cout << "A delegate was found for this key. key:" << key << std::endl;
+      yyz->invoke<0>();
+   }
+   else
+   {
+      std::cout << "No delegate was found for this key. key:" << key << std::endl;
+   }
 
    std::cout << delegate_fns.invoke<0>(i) << delegate_fns.invoke<1>(c) << std::endl;
 

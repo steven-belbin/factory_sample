@@ -23,73 +23,83 @@ template<class... functions_t>
 class delegate_functions final
 {
 public:
-   using function_types = std::tuple<decltype(functions_t{})...>;
+   using functions_type = std::tuple<decltype(functions_t{})...>;
 
    delegate_functions() = default;
+   delegate_functions(const delegate_functions&) = default;
+   delegate_functions(delegate_functions&&) = default;
+
    ~delegate_functions() = default;
 
+   delegate_functions& operator=(const delegate_functions&) = default;
+   delegate_functions& operator=(delegate_functions&&) = default;
+
    ///
    /// <summary>
-   ///   Constructs an instance that is registered with the given functions.
+   ///   Constructs an instance and registers all possible functions.
    /// </summary>
    ///
-   /// <param name="functions">All the different function signatures.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
-   delegate_functions(const functions_t&... functions)
+   delegate_functions(const functions_type& functions)
    : _functions(functions)
    {
    }
 
    ///
    /// <summary>
-   ///   Constructs an instance that is registered with the given functions.
+   ///   Constructs an instance and registers all possible functions.
    /// </summary>
    ///
-   /// <param name="functions">All the different function signatures.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
-   delegate_functions(functions_t&&... functions)
+   delegate_functions(functions_type&& functions)
    : _functions(functions)
    {
    }
 
    ///
    /// <summary>
-   ///   Registers all the functions.
+   ///   Registers all possible functions.
    /// </summary>
    ///
-   /// <param name="functions">All the different function signatures.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
-   void register_functions(const functions_t&... functions)
+   void register_functions(const functions_type& functions)
    {
       _functions = functions;
    }
 
    ///
    /// <summary>
-   ///   Registers all the functions.
+   ///   Registers all possible functions.
    /// </summary>
    ///
-   /// <param name="functions">All the different function signatures.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
-   void register_functions(functions_t&&... functions)
+   void register_functions(functions_type&& functions)
    {
       _functions.swap(functions);
    }
 
    ///
    /// <summary>
-   ///   Unregisters all the functions.
+   ///   Unregisters all possible functions.
    /// </summary>
    ///
    void unregister_functions()
    {
-      _functions = function_types();
+      _functions = functions_type();
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature.
+   ///   Get a specific function by its tuple signature.
    /// </summary>
+   ///
+   /// <returns>A reference to the registered function.</returns>
+   ///
+   /// <remarks>When no function has been registered, then reference will be a function(nullptr).</remarks>
    ///
    template<class function_t>
    decltype(auto) get_function() const
@@ -99,8 +109,12 @@ public:
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature.
+   ///   Get a specific function by its tuple index.
    /// </summary>
+   ///
+   /// <returns>A reference to the registered function.</returns>
+   ///
+   /// <remarks>When no function has been registered, then reference will be a function(nullptr).</remarks>
    ///
    template<int index_t>
    decltype(auto) get_function() const
@@ -110,28 +124,30 @@ public:
 
    ///
    /// <summary>
-   ///   Registers a single function.
+   ///   Registers a specific function.
    /// </summary>
    ///
    /// <param name="function">The function signature that is to be registered.</param>
    ///
    template<class function_t>
-   void register_function(const function_t& function)
+   void register_function(function_t function)
    {
-      std::get<function_t>(_functions) = function;
+      std::get<function_t>(_functions) = std::move(function);
    }
 
    ///
    /// <summary>
-   ///   Registers a single function.
+   ///   Registers a specific function by its tuple index.
    /// </summary>
    ///
    /// <param name="function">The function signature that is to be registered.</param>
    ///
-   template<class function_t>
-   void register_function(function_t&& function)
+   /// <remarks>Invoke this method when multiple functions have the same signature.</remarks>
+   ///
+   template<int index_t, class function_t>
+   void register_function(function_t function)
    {
-      std::get<function_t>(_functions).swap(function);
+      std::get<index_t>(_functions) = std::move(function);
    }
 
    ///
@@ -142,18 +158,18 @@ public:
    template<class function_t>
    void unregister_function()
    {
-      register_function<function_t>(nullptr);
+      std::get<function_t>(_functions) = nullptr;
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its signature.
+   ///   Unregisters a specific function by its tuple index.
    /// </summary>
    ///
    template<int index_t>
    void unregister_function()
    {
-      register_function<index_t>(nullptr);
+      std::get<index_t>(_functions) = nullptr;
    }
 
    ///
@@ -161,9 +177,9 @@ public:
    ///   Invoke a specific function by its signature.
    /// </summary>
    ///
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="args">The arguments to pass to the function.</param>
    ///
-   /// <exception cref="std::bad_function_call">When there is no valid function with this signature which is registered with the given key.</exception>
+   /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
    ///
    template<class function_t, class... args_t>
    decltype(auto) invoke(args_t&&... args)
@@ -173,12 +189,12 @@ public:
 
    ///
    /// <summary>
-   ///   Invoke a specific function by its signature.
+   ///   Invoke a specific function by its tuple index.
    /// </summary>
    ///
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="args">The arguments to pass to the function.</param>
    ///
-   /// <exception cref="std::bad_function_call">When there is no valid function with this signature which is registered with the given key.</exception>
+   /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
    ///
    template<int index_t, class... args_t>
    decltype(auto) invoke(args_t&&... args)
@@ -186,13 +202,25 @@ public:
       return get_function<index_t>()(std::forward<args_t>(args)...);
    }
 
+   ///
+   /// <summary>
+   ///   Swaps the contents with another reference.
+   /// </summary>
+   ///
+   /// <param name="other">The reference to swap contents with.</param>
+   ///
+   void swap(delegate_functions& other)
+   {
+      _functions.swap(other._functions);
+   }
+
 private:
-   function_types _functions;
+   functions_type _functions;
 };
 
 ///
 /// <summary>
-///   The key_delegates_functions class allows to register a delegate functions.
+///   The key_delegates_functions class allows to register a collection of delegate functions.
 ///   <para>Each delegate is identified by a unique key identifier.</para>
 ///   <para>When a delegate is found, it is then possible to invoke the corresponding function that matches the given function signature.</para>
 /// </summary>
@@ -207,19 +235,26 @@ public:
    typedef std::unordered_map<key_type, delegate_type> delegates_type;
 
    key_delegates_functions() = default;
+   key_delegates_functions(const key_delegates_functions&) = default;
+   key_delegates_functions(key_delegates_functions&&) = default;
+
    ~key_delegates_functions() = default;
 
+   key_delegates_functions& operator=(const key_delegates_functions&) = default;
+   key_delegates_functions& operator=(key_delegates_functions&&) = default;
+
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Registers a delegate with the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   /// <param name="delegate">The delegate that contains the functions that can be invoked.</param>
    ///
-   void register_functions(const key_type& key,
-                           const delegate_type& functions)
+   void register_delegate(const key_type& key,
+                          const delegate_type& delegate)
    {
-      _delegates.emplace(key, functions);
+      _delegates.emplace(key, delegate);
    }
 
    ///
@@ -229,35 +264,35 @@ public:
    ///
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    ///
-   void register_functions(const key_type& key,
-                           delegate_type&& functions)
+   void register_delegate(const key_type& key,
+                          delegate_type&& delegate)
    {
-      _delegates.emplace(key, functions);
+      _delegates.emplace(key, std::move(delegate));
    }
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
-   ///
-   void register_functions(const key_type& key,
-                           functions_t&&... functions)
-   {
-      register_functions(key, delegate_type(functions));
-   }
-
-   ///
-   /// <summary>
-   ///   Unregisters all the functions that were registered with the given key.
+   ///   Unregisters the delegate functions that was associated with the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key in which the functions were registered under.</param>
    ///
-   void unregister_functions(const key_type& key)
+   void unregister_delegate(const key_type& key)
    {
       _delegates.erase(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Registers all the functions under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   ///
+   void register_functions(const key_type& key,
+                           function_types functions)
+   {
+      register_delegate(key, delegate_type(std::move(functions)));
    }
 
    ///
@@ -270,9 +305,9 @@ public:
    ///
    template<class function_t>
    void register_function(const key_type& key,
-                          const function_t& function)
+                          function_t function)
    {
-      _delegates[key].register_function(function);
+      _delegates[key].register_function(std::move(function));
    }
 
    ///
@@ -283,12 +318,12 @@ public:
    /// <param name="key">The unique identifying key to associate with this function.</param>
    /// <param name="function">The function that is to be registered.</param>
    ///
-   //template<class function_t>
-   //void register_function(const key_type& key,
-   //                       function_t&& function)
-   //{
-   //   _delegates[key].register_function(function);
-   //}
+   template<int index_t, class function_t>
+   void register_function(const key_type& key,
+                          function_t function)
+   {
+      _delegates[key].register_function<index_t>(std::move(function));
+   }
 
    ///
    /// <summary>
@@ -324,6 +359,39 @@ public:
       {
          delegate_iter->second.unregister_function<index_t>();
       }
+   }
+
+   ///
+   /// <summary>
+   ///   Get a specific function by its signature that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   ///
+   decltype(auto) get_delegate(const key_type& key) const
+   {
+      const auto& delegate_iter = _delegates.find(key);
+
+      return (delegate_iter != std::cend(_delegates))
+             ? std::addressof(delegate_iter->second)
+            : nullptr;
+   }
+
+
+   ///
+   /// <summary>
+   ///   Get a specific function by its signature that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   ///
+   decltype(auto) get_delegate(const key_type& key)
+   {
+      const auto& delegate_iter = _delegates.find(key);
+
+      return (delegate_iter != std::cend(_delegates))
+             ? std::addressof(delegate_iter->second)
+             : nullptr;
    }
 
    ///
@@ -376,7 +444,7 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return _delegates.at(key).invoke<function_t>(std::move(args));
+      return at(key).invoke<function_t>(std::move(args));
    }
 
    ///
@@ -395,7 +463,79 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return _delegates.at(key).invoke<index_t>(std::move(args));
+      return at(key).invoke<index_t>(std::move(args));
+   }
+
+   ///
+   /// <summary>
+   ///   Swaps the contents with another reference.
+   /// </summary>
+   ///
+   /// <param name="other">The reference to swap contents with.</param>
+   ///
+   void swap(key_delegates_functions& other)
+   {
+      _delegates.swap(other._delegates);
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   ///
+   /// <returns>A const reference to a delegate of functions.</returns>
+   ///
+   decltype(auto) operator[](const key_type& key) const
+   {
+      return _delegates[key];
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   ///
+   /// <returns>A reference to a delegate of functions.</returns>
+   ///
+   decltype(auto) operator[](const key_type& key)
+   {
+      return _delegates[key];
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   ///
+   /// <returns>A const reference to a delegate of functions.</returns>
+   ///
+   /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
+   ///
+   decltype(auto) at(const key_type& key) const
+   {
+      return _delegates,at(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   ///
+   /// <returns>A reference to a delegate of functions.</returns>
+   ///
+   /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
+   ///
+   decltype(auto) at(const key_type& key)
+   {
+      return _delegates,at(key);
    }
 
 private:
@@ -421,8 +561,14 @@ public:
    typedef typename key_delegates_type::delegate_type delegate_type;
 
    key_class_factory() = default;
+   key_class_factory(const key_class_factory&) = default;
+   key_class_factory(key_class_factory&&) = default;
+
    ~key_class_factory() = default;
-   
+
+   key_class_factory& operator=(const key_class_factory&) = default;
+   key_class_factory& operator=(key_class_factory&&) = default;
+
    ///
    /// <summary>
    ///   Registers all the functions under the given key.
@@ -430,10 +576,23 @@ public:
    ///
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    ///
-   void register_functions(const key_type& key,
-                           const delegate_type& functions)
+   void register_delegate(const key_type& key,
+                          const delegate_type& delegate)
    {
-      _delegates.register_functions(key, functions);
+      _delegates.register_delegate(key, delegate);
+   }
+
+   ///
+   /// <summary>
+   ///   Registers all the functions under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   ///
+   void register_delegate(const key_type& key,
+                          delegate_type&& delegate)
+   {
+      _delegates.register_delegate(key, delegate);
    }
 
    ///
@@ -444,35 +603,9 @@ public:
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    ///
    void register_functions(const key_type& key,
-                           delegate_type&& functions)
+                           function_types functions)
    {
-      _delegates.register_functions(key, functions);
-   }
-
-   ///
-   /// <summary>
-   ///   Registers all the functions under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
-   ///
-   void register_functions(const key_type& key,
-                           const functions_t&... functions)
-   {
-      _delegates.register_functions(key, functions);
-   }
-
-   ///
-   /// <summary>
-   ///   Registers all the functions under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
-   ///
-   void register_functions(const key_type& key,
-                           functions_t&&... functions)
-   {
-      _delegates.register_functions(key, functions);
+      _delegates.register_delegate(key, delegate_type(std::move(functions)));
    }
 
    ///
@@ -482,9 +615,9 @@ public:
    ///
    /// <param name="key">The unique identifying key in which the functions were registered under.</param>
    ///
-   void unregister_functions(const key_type& key)
+   void unregister_delegate(const key_type& key)
    {
-      return _delegates.unregister_functions(key);
+      return _delegates.unregister_delegate(key);
    }
 
    ///
@@ -497,24 +630,9 @@ public:
    ///
    template<class function_t>
    void register_function(const key_type& key,
-                          const function_t& function)
+                          function_t function)
    {
-      _delegates.register_function(key, function);
-   }
-
-   ///
-   /// <summary>
-   ///   Registers a single function under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with this function.</param>
-   /// <param name="function">The function that is to be registered.</param>
-   ///
-   template<class function_t>
-   void register_function(const key_type& key,
-                          function_t&& function)
-   {
-      _delegates.register_function(key, function);
+      _delegates.register_function(key, std::move(function));
    }
 
    ///
@@ -615,6 +733,18 @@ public:
       return (function)
              ? function(std::forward<args_t>(args)...)
              : decltype(function(std::forward<args_t>(args)...))(nullptr);
+   }
+
+   ///
+   /// <summary>
+   ///   Swaps the contents with another reference.
+   /// </summary>
+   ///
+   /// <param name="other">The reference to swap contents with.</param>
+   ///
+   void swap(key_class_factory& other)
+   {
+      _delegates.swap(other._delegates);
    }
 
 private:
