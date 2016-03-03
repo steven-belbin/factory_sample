@@ -144,7 +144,7 @@ public:
 
    ///
    /// <summary>
-   ///   Get a specific function by its tuple signature.
+   ///   Get a specific function by its signature.
    /// </summary>
    ///
    /// <returns>A reference to the registered function.</returns>
@@ -159,7 +159,7 @@ public:
 
    ///
    /// <summary>
-   ///   Get a specific function by its tuple index.
+   ///   Get a specific function by its index position.
    /// </summary>
    ///
    /// <returns>A reference to the registered function.</returns>
@@ -187,7 +187,20 @@ public:
 
    ///
    /// <summary>
-   ///   Registers a specific function by its tuple index.
+   ///   Registers a specific function by its signature.
+   /// </summary>
+   ///
+   /// <param name="function">The function signature that is to be registered.</param>
+   ///
+   template<class function_t>
+   void register_fn(const std::function<function_t>& function)
+   {
+      std::get<function_t>(_functions) = function.target<function_t*>();
+   }
+
+   ///
+   /// <summary>
+   ///   Registers a specific function by its index position.
    /// </summary>
    ///
    /// <param name="function">The function signature that is to be registered.</param>
@@ -195,7 +208,7 @@ public:
    /// <remarks>Invoke this method when multiple functions have the same signature.</remarks>
    ///
    template<int index_t, class function_t>
-   void register_function(function_t function)
+   void register_function(function_t&& function)
    {
       std::get<index_t>(_functions) = std::move(function);
    }
@@ -530,7 +543,7 @@ public:
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate that matches the given key.
+   ///   Get a reference to a delegate of functions that matches the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
@@ -544,7 +557,7 @@ public:
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate that matches the given key.
+   ///   Get a reference to a delegate of functions that matches the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
@@ -558,7 +571,7 @@ public:
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate that matches the given key.
+   ///   Get a reference to a delegate of functions that matches the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
@@ -569,12 +582,12 @@ public:
    ///
    decltype(auto) at(const key_type& key) const
    {
-      return _delegates,at(key);
+      return _delegates.at(key);
    }
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate that matches the given key.
+   ///   Get a reference to a delegate of functions that matches the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
@@ -585,7 +598,7 @@ public:
    ///
    decltype(auto) at(const key_type& key)
    {
-      return _delegates,at(key);
+      return _delegates.at(key);
    }
 
 private:
@@ -621,10 +634,11 @@ public:
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Registers all the delegate under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   /// <param name="delegate">The functions delegate to be registered.</param>
    ///
    void register_delegate(const key_type& key,
                           const delegate_type& delegate)
@@ -634,10 +648,11 @@ public:
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Registers all the delegate under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   /// <param name="delegate">The functions delegate to be registered.</param>
    ///
    void register_delegate(const key_type& key,
                           delegate_type&& delegate)
@@ -647,10 +662,11 @@ public:
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Registers the functions under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   /// <param name="functions">The functions that are to be registered.</param>
    ///
    void register_functions(const key_type& key,
                            function_types functions)
@@ -700,7 +716,7 @@ public:
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its signature that was registered under the given key.
+   ///   Unregisters a specific function by its index position that was registered under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key in which the function was registered under.</param>
@@ -713,12 +729,10 @@ public:
 
    ///
    /// <summary>
-   ///   Constructs an instance of the class.
+   ///   Get a specific function by its signature that was registered under the given key.
    /// </summary>
    ///
-   /// <see cref="key_delegates_functions::invoke"/>
-   ///
-   /// <returns>An instance of the class.<returns>
+   /// <returns>A reference to the function object.<returns>
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<class function_t>
@@ -729,12 +743,10 @@ public:
 
    ///
    /// <summary>
-   ///   Constructs an instance of the class.
+   ///   Get a specific function by its index position that was registered under the given key.
    /// </summary>
    ///
-   /// <see cref="key_delegates_functions::invoke"/>
-   ///
-   /// <returns>An instance of the class.<returns>
+   /// <returns>A reference to the function object.<returns>
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<int index_t>

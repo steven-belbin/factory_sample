@@ -2,6 +2,7 @@
 
 #include "factory.h"
 
+#include <functional>
 #include <iostream>
 #include <typeinfo>
 
@@ -169,22 +170,64 @@ void test_factory(api::foo_factory& factory)
    test_constructors(factory, key);
 }
 
+class toto
+{
+public:
+   toto() = delete;
+   toto(const int value) : _value(value) {}
+   ~toto() = default;
+
+   int foo() { return _value; }
+
+private:
+   const int _value;
+};
+
+int fn_void()
+{
+   return 0;
+}
+
 void test_delegate()
 {
-   //typedef int(*fn0)();
-   //typedef int(*fn1)(int, int);
-   //prgrmr::generic::delegate_functions<fn0, fn1> delegate_fns;
+   typedef int(*fn0)();
+   typedef int(*fn1)(int, int);
+   prgrmr::generic::delegate_functions<fn0, fn1> delegate_fns;
 
 
-   prgrmr::generic::delegate_functions<int(*)(),
-                                       int(*)(int, int)>
-      delegate_fns;
+   //prgrmr::generic::delegate_functions<int(*)(),
+   //                                    int(*)(int, int)>
+   //delegate_fns;
 
-   delegate_fns.register_function<0>([]() { return 10; });
-   delegate_fns.register_function<1>([](int a, int b) { return a + b; });
+   //auto fn = []() { return 10; };
 
-   std::cout << delegate_fns.invoke<0>() << std::endl;
-   std::cout << delegate_fns.invoke<1>(10, 20) << std::endl;
+   //prgrmr::generic::delegate_functions<int(*)()> dg(fn);
+   //dg.invoke<0>();
+
+
+   //delegate_fns.register_function<int (*)()>([]() { return 10; });
+   //delegate_fns.register_function<1>([](int a, int b) { return a + b; });
+
+   //std::cout << delegate_fns.invoke<0>() << std::endl;
+   //std::cout << delegate_fns.invoke<1>(10, 20) << std::endl;
+
+   delegate_fns.register_function<fn0>([]() { return 10; });
+   delegate_fns.register_function<fn1>([](int a, int b) { return a + b; });
+
+   delegate_fns.register_function<fn0>(&fn_void);
+
+   toto t(-10);
+   std::function<int ()> x = std::bind(&toto::foo, t);
+
+
+   //auto xx = x;
+   //auto y = *xx;
+
+ //  delegate_fns.register_function<fn0>(*x.target<fn0>());
+   //delegate_fns.register_fn<int ()>(x);
+
+   std::cout << delegate_fns.invoke<fn0>() << std::endl;
+   std::cout << delegate_fns.invoke<fn1>(10, 20) << std::endl;
 }
 
 int main()
