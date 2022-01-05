@@ -398,11 +398,11 @@ public:
    template<class function_t>
    void unregister_function(const key_type& key)
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      if (delegate_iter != cend(_delegates))
+      if (iter != std::end(_delegates))
       {
-         delegate_iter->second.unregister_function<function_t>();
+          iter->second.unregister_function<function_t>();
       }
    }
 
@@ -416,11 +416,11 @@ public:
    template<int index_t>
    void unregister_function(const key_type& key)
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      if (delegate_iter != cend(_delegates))
+      if (iter != std::end(_delegates))
       {
-         delegate_iter->second.unregister_function<index_t>();
+         iter->second.unregister_function<index_t>();
       }
    }
 
@@ -433,11 +433,11 @@ public:
    ///
    decltype(auto) get_delegate(const key_type& key) const
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      return (delegate_iter != std::cend(_delegates))
-             ? std::addressof(delegate_iter->second)
-            : nullptr;
+      return (iter != std::end(_delegates))
+           ? std::addressof(iter->second)
+           : nullptr;
    }
 
 
@@ -450,11 +450,11 @@ public:
    ///
    decltype(auto) get_delegate(const key_type& key)
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      return (delegate_iter != std::cend(_delegates))
-             ? std::addressof(delegate_iter->second)
-             : nullptr;
+      return (iter != std::end(_delegates))
+           ? std::addressof(iter->second)
+           : nullptr;
    }
 
    ///
@@ -467,11 +467,11 @@ public:
    template<class function_t>
    auto get_function(const key_type& key) const
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      return (delegate_iter != std::cend(_delegates))
-             ? delegate_iter->second.get_function<function_t>()
-             : decltype(delegate_iter->second.get_function<function_t>())(nullptr);
+      return (iter != std::end(_delegates))
+             ? iter->second.get_function<function_t>()
+             : decltype(iter->second.get_function<function_t>())(nullptr);
    }
 
    ///
@@ -484,11 +484,11 @@ public:
    template<int index_t>
    auto get_function(const key_type& key) const
    {
-      const auto& delegate_iter = _delegates.find(key);
+      const auto& iter = _delegates.find(key);
 
-      return (delegate_iter != std::cend(_delegates))
-             ? delegate_iter->second.get_function<index_t>()
-             : decltype(delegate_iter->second.get_function<index_t>())(nullptr);
+      return (iter != std::end(_delegates))
+             ? iter->second.get_function<index_t>()
+             : decltype(iter->second.get_function<index_t>())(nullptr);
    }
 
    ///

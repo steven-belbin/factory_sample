@@ -15,10 +15,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="factory.h">
+    <ClInclude Include="api_nike.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="api_foo.h">
+    <ClInclude Include="factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="my_nike.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="your_nike.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="simple_nike.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="madison_nike.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
