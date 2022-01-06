@@ -385,6 +385,26 @@ public:
       _delegates[key].register_function<index_t>(std::move(function));
    }
 
+   void find_delegate_by_key_invoke(const key_type& key,
+                                    std::function<void(const delegate_type& delegate)>& functor)
+   {
+       const auto& iter = _delegates.find(key);
+
+       if (iter != std::end(_delegates)) functor(iter->second);
+   }
+
+   template<typename return_t>
+   void find_delegate_by_key_call(const key_type& key,
+                                  std::function<return_t (const delegate_type& delegate)>& functor,
+                                  return_t otherwise)
+   {
+       const auto& iter = _delegates.find(key);
+
+       return (iter != std::end(_delegates))
+            ? functor(iter->second)
+            : otherwise;
+   }
+
    ///
    /// <summary>
    ///   Unregisters a specific function by its signature that was registered under the given key.
@@ -395,12 +415,11 @@ public:
    template<class function_t>
    void unregister_function(const key_type& key)
    {
-      const auto& iter = _delegates.find(key);
-
-      if (iter != std::end(_delegates))
-      {
-          iter->second.unregister_function<function_t>();
-      }
+      find_delegate_by_key_invoke(key,
+                                  [](const delegate_type& delegate)
+                                  {
+                                     unregister_function<function_t>();
+                                  });
    }
 
    ///
@@ -413,12 +432,11 @@ public:
    template<int index_t>
    void unregister_function(const key_type& key)
    {
-      const auto& iter = _delegates.find(key);
-
-      if (iter != std::end(_delegates))
-      {
-         iter->second.unregister_function<index_t>();
-      }
+      find_delegate_by_key_invoke(key,
+                                  [](const delegate_type& delegate)
+                                  {
+                                     unregister_function<index_t>();
+                                  });
    }
 
    ///
@@ -430,13 +448,14 @@ public:
    ///
    decltype(auto) get_delegate(const key_type& key) const
    {
-      const auto& iter = _delegates.find(key);
-
-      return (iter != std::end(_delegates))
-           ? std::addressof(iter->second)
-           : nullptr;
+      return find_delegate_by_key_call(
+                 key,
+                 [](const delegate_type& delegate) -> auto
+                 {
+                   return std::addressof(delegate);
+                 },
+                 nullptr);
    }
-
 
    ///
    /// <summary>
@@ -447,11 +466,12 @@ public:
    ///
    decltype(auto) get_delegate(const key_type& key)
    {
-      const auto& iter = _delegates.find(key);
-
-      return (iter != std::end(_delegates))
-           ? std::addressof(iter->second)
-           : nullptr;
+      return find_delegate_by_key_call(key,
+             [](const delegate_type& delegate)
+             {
+               return std::addressof(delegate);
+             },
+             nullptr);
    }
 
    ///
@@ -464,11 +484,12 @@ public:
    template<class function_t>
    auto get_function(const key_type& key) const
    {
-      const auto& iter = _delegates.find(key);
-
-      return (iter != std::end(_delegates))
-             ? iter->second.get_function<function_t>()
-             : decltype(iter->second.get_function<function_t>())(nullptr);
+      return find_delegate_by_key_call(key,
+             [](const delegate_type& delegate) -> auto
+             {
+               return delegate.get_function<function_t>();
+             },
+             nullptr);
    }
 
    ///
