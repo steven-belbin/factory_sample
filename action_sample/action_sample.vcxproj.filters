@@ -13,32 +13,44 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\nike">
+      <UniqueIdentifier>{695f0de4-d219-4116-9655-0499231d1830}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\prgrmr">
+      <UniqueIdentifier>{3362ab54-b360-4fed-afab-9682c540aa89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\prgrmr\generic">
+      <UniqueIdentifier>{4221d302-cb45-45ad-9a4a-ab5015917fb4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="api_nike.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="nike\shoe.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="factory.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="nike\shoe_factory.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="my_nike.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="nike\madison.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="your_nike.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="nike\jordan.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="simple_nike.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="nike\lebron.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="madison_nike.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="nike\runner.h">
+      <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="class_name.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="prgrmr\generic\factory.h">
+      <Filter>Header Files\prgrmr\generic</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\generic\class_name.h">
+      <Filter>Header Files\prgrmr\generic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="test_factory.cpp">
+    <ClCompile Include="test_nike_shoe_factory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

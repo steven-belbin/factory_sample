@@ -1,5 +1,10 @@
 #pragma once
 
+#include <string_view>
+#include <typeinfo>
+
+namespace prgrmr::generic
+{
 template<class T>
 constexpr auto class_name()
 {
@@ -17,4 +22,6 @@ template<class T>
 constexpr auto class_name(const T&)
 {
     return class_name<T>();
+}
+
 }

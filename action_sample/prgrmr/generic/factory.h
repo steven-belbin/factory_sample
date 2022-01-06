@@ -5,11 +5,8 @@
 #include <tuple>
 #include <unordered_map>
 
-namespace prgrmr
+namespace prgrmr::generic
 {
-namespace generic
-{
-
 template<class function_t>
 function_t build_functions_type(function_t&& function)
 {
@@ -812,5 +809,4 @@ public:
 private:
    key_delegates_type _delegates;
 };
-}
 }
