@@ -73,10 +73,7 @@ void run_shoe_tests(nike::shoe* shoe)
     std::unique_ptr<nike::shoe> shoe_ptr{ shoe };
 
     if (shoe_ptr == nullptr)
-    {
-        std::cerr << "No methods to run since a null reference was provided.\n";
         return;
-    }
 
     shoe_ptr->do_it();
 }
