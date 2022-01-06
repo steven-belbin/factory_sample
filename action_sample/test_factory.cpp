@@ -11,30 +11,20 @@
 #include <typeinfo>
 #include <string_view>
 
-template<class T>
-constexpr auto key_name()
-{
-    const std::string_view name = typeid(T).name();
-
-    const auto pos = name.find_last_of(' ');
-
-    if (pos == std::string_view::npos)
-        return name;
-
-    return name.substr(pos + 1);
-}
+using base_construtor = std::function<api::nike* ()>;
+using numerics_construtor = std::function<api::nike* (int, float)>;
 
 template<class T>
-void register_constructors(api::foo_factory& factory,
-                           const api::foo_factory::key_type& key)
+void register_constructors(api::nike_factory& factory,
+                           const api::nike_factory::key_type& key)
 {
-   factory.register_function(key, std::function<api::nike* ()>(
+   factory.register_function(key, base_construtor(
                                   []()
                                   {
                                      return new T();
                                   }));
 
-   factory.register_function(key, std::function<api::nike* (int, float)>(
+   factory.register_function(key, numerics_construtor(
                                   [](int a, float b)
                                   {
                                      return new T(a, b);
@@ -43,20 +33,27 @@ void register_constructors(api::foo_factory& factory,
 
 
 /// <summary>
-///  In a scenario in which the the derived class doesn't support all the variations
-///  to constructor an instance. Such as the testing::simple_nike class only provides
-///  a base constructor without one for numerics.
+///  The testing::simple_nike class doesn't provide a constructor with numerics signature.
 /// 
-///  Therefore, it's possible to register a function that accepts numerics values, but
-///  will instead invokes the factory's registered base constructor instead. 
+///  Thus, it's possible to register a function that accepts the above signature and will
+///  forward to the factory's registered base constructor instead. 
 /// </summary>
+/// 
+/// <remarks>
+///  This is motivating example of being able to construct a class but without having to
+///  alter it in order to comply with different means in which the application would need
+///  to construct it.
+/// 
+///  While the numerics constructor is trivial, there are situations in which application
+///  developers would like to construct an object from a serialized storage such as JSON
+///  or even a database. Here a developper could register functions that accepts a JSON
+///  body or database connection and deserializes the contents then forwards to the best
+///  function in the factory that has been registered.
+/// </remarks>
 template<>
-void register_constructors<testing::simple_nike>(api::foo_factory& factory,
-                                                 const api::foo_factory::key_type& key)
+void register_constructors<testing::simple_nike>(api::nike_factory& factory,
+                                                 const api::nike_factory::key_type& key)
 {
-   using base_construtor = std::function<api::nike* ()>;
-   using numerics_construtor = std::function<api::nike* (int, float)>;
-
    factory.register_function(key, base_construtor(
                                   []()
                                   {
@@ -74,18 +71,18 @@ void run_methods(api::nike* nike)
 {
     if (nike == nullptr)
     {
-        std::cerr << "No methods to run since a null reference was passed in.\n";
+        std::cerr << "No methods to run since a null reference was provided.\n";
         return;
     }
 
-    std::unique_ptr<api::nike> foo_ptr{ nike };
+    std::unique_ptr<api::nike> nike_ptr{ nike };
 
     std::cout << "Running methods.\n";
-    foo_ptr->do_it();
+    nike_ptr->do_it();
 }
 
-void test_constructors(const api::foo_factory& factory,
-                       const api::foo_factory::key_type& key)
+void test_constructors(const api::nike_factory& factory,
+                       const api::nike_factory::key_type& key)
 {
    run_methods(factory.construct<std::function<api::nike* ()>>(key));
    run_methods(factory.construct<std::function<api::nike* (int, float)>>(key, 5, 5.0f));
@@ -94,15 +91,18 @@ void test_constructors(const api::foo_factory& factory,
    run_methods(factory.construct<1>(key, 5, 5.0f));
 }
 
-void test_factory(api::foo_factory& factory,
-                  const api::foo_factory::key_type key)
+void test_factory(api::nike_factory& factory,
+                  const api::nike_factory::key_type key)
 {
+   std::cout << "Constructing objects & running thier methods for the given key.\n";
    test_constructors(factory, key);
+
+   std::cout << "Unregistered all functions for the given key. Nothing shall be constructed after this point with this key.\n";
    factory.unregister_delegate(key);
    test_constructors(factory, key);
 }
 
-void configure_application(api::foo_factory& factory)
+void configure_application(api::nike_factory& factory)
 {
     register_constructors<testing::my_nike>(factory, "my");
     register_constructors<testing::your_nike>(factory, "your");
@@ -110,7 +110,7 @@ void configure_application(api::foo_factory& factory)
     register_constructors<testing::madison>(factory, "madison");
 }
 
-int run_application(api::foo_factory& factory)
+int run_application(api::nike_factory& factory)
 {
     test_factory(factory, "my");
     test_factory(factory, "your");
@@ -122,7 +122,7 @@ int run_application(api::foo_factory& factory)
 
 int main()
 {
-   api::foo_factory factory;
+   api::nike_factory factory;
 
    configure_application(factory);
 

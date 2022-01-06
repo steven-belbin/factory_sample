@@ -33,6 +33,9 @@
     <ClInclude Include="madison_nike.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="class_name.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test_factory.cpp">

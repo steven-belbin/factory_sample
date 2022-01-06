@@ -126,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api_nike.h" />
+    <ClInclude Include="class_name.h" />
     <ClInclude Include="factory.h" />
     <ClInclude Include="madison_nike.h" />
     <ClInclude Include="my_nike.h" />

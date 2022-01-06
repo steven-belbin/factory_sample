@@ -1,4 +1,7 @@
+#pragma once
+
 #include "api_nike.h"
+#include "class_name.h"
 #include "iostream"
 
 namespace testing
@@ -17,7 +20,7 @@ public:
     {
         _a *= 2;
         _b *= 2.2f;
-        std::cout << "Inside the " << typeid(*this).name() << " class. a: " << _a << ", b: " << _b << std::endl;
+        std::cout << "Inside " << class_name(*this) << ". a: " << _a << ", b : " << _b << std::endl;
     }
 
 private:

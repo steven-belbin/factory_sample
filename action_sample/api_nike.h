@@ -21,5 +21,5 @@ private:
 
 typedef prgrmr::generic::key_class_factory<std::string,
                                            std::function<nike* ()>,
-                                           std::function<nike* (int, float)>> foo_factory;
+                                           std::function<nike* (int, float)>> nike_factory;
 }

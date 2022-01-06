@@ -1,3 +1,5 @@
+#pragma once
+
 #include "api_nike.h"
 #include "iostream"
 
@@ -15,7 +17,7 @@ public:
    {
       for (decltype(_a) i = 0; i < _a; i++)
       {
-         std::cout << "madison, I love you!!!" << std::endl;
+         std::cout << "Madison, I love you!!!" << std::endl;
       }
    }
 
