@@ -68,7 +68,7 @@ void register_constructors<nike::runner>(nike::shoe_factory& factory,
                                   }));
 }
 
-void run_methods(nike::shoe* shoe)
+void run_shoe_tests(nike::shoe* shoe)
 {
     std::unique_ptr<nike::shoe> shoe_ptr{ shoe };
 
@@ -78,28 +78,34 @@ void run_methods(nike::shoe* shoe)
         return;
     }
 
-    std::cout << "Running methods.\n";
     shoe_ptr->do_it();
 }
 
 void test_constructors(const nike::shoe_factory& factory,
                        const nike::shoe_factory::key_type& key)
 {
-   run_methods(factory.construct<nike::base_constructor>(key));
-   run_methods(factory.construct<nike::numerics_constructor>(key, 5, 5.0f));
+   std::cout << "Constructing using base signature.\n";
+   run_shoe_tests(factory.construct<nike::base_constructor>(key));
 
-   run_methods(factory.construct<0>(key));
-   run_methods(factory.construct<1>(key, 5, 5.0f));
+   std::cout << "Construct using numerics signature.\n";
+   run_shoe_tests(factory.construct<nike::numerics_constructor>(key, 5, 5.0f));
+
+   std::cout << "Construct using [0].\n";
+   run_shoe_tests(factory.construct<0>(key));
+
+   std::cout << "Construct using [1].\n";
+   run_shoe_tests(factory.construct<1>(key, 5, 5.0f));
 }
 
 void test_factory(nike::shoe_factory& factory,
                   const nike::shoe_factory::key_type key)
 {
-   std::cout << "Constructing shoes & running thier methods for the given key.\n";
+   std::cout << "Constructing " << key << " shoes & running it's tests.\n";
    test_constructors(factory, key);
 
-   std::cout << "Unregistered all functions for the given key. Nothing shall be constructed after this point with this key.\n";
+   std::cout << "Unregistered all constructors for this key. From this points onwards nothing shall be constructed with this key.\n";
    factory.unregister_delegate(key);
+
    test_constructors(factory, key);
 }
 
@@ -113,7 +119,7 @@ void configure_application(nike::shoe_factory& factory)
 
 int run_application(nike::shoe_factory& factory)
 {
-    for(const auto& key : { "jordan", "lebron, runner", "madison" })
+    for(const auto& key : { "jordan", "lebron", "runner", "madison" })
     {
         test_factory(factory, key);
     }
