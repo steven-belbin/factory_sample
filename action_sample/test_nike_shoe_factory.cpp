@@ -81,29 +81,37 @@ void run_shoe_tests(nike::shoe* shoe)
 void test_constructors(const nike::shoe_factory& factory,
                        const nike::shoe_factory::key_type& key)
 {
-   std::cout << "Constructing using base signature.\n";
+   std::cout << "----------  Constructing using signatures.  -------------\n";
+
+   std::cout << "Base signature.\n";
    run_shoe_tests(factory.construct<nike::base_constructor>(key));
 
-   std::cout << "Construct using numerics signature.\n";
+   std::cout << "\nConstruct using numerics signature.\n";
    run_shoe_tests(factory.construct<nike::numerics_constructor>(key, 5, 5.0f));
 
-   std::cout << "Construct using [0].\n";
+   std::cout << "\n----------  Constructing using tuples.  --------------\n";
+
+   std::cout << "Tuple<0>\n";
    run_shoe_tests(factory.construct<0>(key));
 
-   std::cout << "Construct using [1].\n";
+   std::cout << "\nTuple<1>\n";
    run_shoe_tests(factory.construct<1>(key, 5, 5.0f));
 }
 
 void test_factory(nike::shoe_factory& factory,
                   const nike::shoe_factory::key_type key)
 {
-   std::cout << "Constructing " << key << " shoes & running it's tests.\n";
+   std::cout << "============================================================================================\n";
+   std::cout << "                         Constructing " << key << " shoes & running it's tests.\n";
+   std::cout << "============================================================================================\n";
    test_constructors(factory, key);
 
-   std::cout << "Unregistered all constructors for this key. From this points onwards nothing shall be constructed with this key.\n";
+   std::cout << "\nUnregistered all constructors for this key. From this points onwards nothing shall be constructed with this key.\n";
    factory.unregister_delegate(key);
 
    test_constructors(factory, key);
+
+   std::cout << "\n============================================================================================\n\n";
 }
 
 void configure_application(nike::shoe_factory& factory)
