@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 #include <unordered_map>
 
 namespace prgrmr::generic
@@ -33,7 +34,11 @@ template<class... functions_t>
 class delegate_functions final
 {
 public:
-   using functions_type = std::tuple<decltype(functions_t{})...>;
+   using functions_type = std::tuple<functions_t...>;
+
+   static constexpr auto functions_size = std::tuple_size<functions_type>::value;
+
+   static_assert(functions_size > 0);
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
@@ -136,7 +141,7 @@ public:
    ///
    void unregister_functions()
    {
-      _functions = functions_type();
+      _functions = functions_type{};
    }
 
    ///
@@ -290,7 +295,7 @@ class key_delegates_functions final
 {
 public:
    typedef key_t key_type;
-   using function_types = std::tuple<decltype(functions_t{})...>;
+   using function_types = std::tuple<functions_t...>;
    typedef delegate_functions<functions_t...> delegate_type;
    typedef std::unordered_map<key_type, delegate_type> delegates_type;
 
@@ -616,7 +621,7 @@ class key_class_factory final
 {
 public:
    typedef key_t key_type;
-   using function_types = std::tuple<decltype(functions_t{})...>;
+   using function_types = std::tuple<functions_t...>;
    typedef key_delegates_functions<key_type, functions_t...> key_delegates_type;
    typedef typename key_delegates_type::delegate_type delegate_type;
 

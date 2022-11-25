@@ -132,8 +132,17 @@ int run_application(nike::shoe_factory& factory)
     return 0;
 }
 
+void compile_zero_delegates()
+{
+    prgrmr::generic::delegate_functions df;
+
+    df.invoke<void()>();
+}
+
 int main()
 {
+   compile_zero_delegates();
+
    nike::shoe_factory factory;
 
    configure_application(factory);

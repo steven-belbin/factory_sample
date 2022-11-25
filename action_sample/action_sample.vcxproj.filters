@@ -48,6 +48,12 @@
     <ClInclude Include="prgrmr\generic\class_name.h">
       <Filter>Header Files\prgrmr\generic</Filter>
     </ClInclude>
+    <ClInclude Include="prgrmr\generic\function_signature_checks.h">
+      <Filter>Header Files\prgrmr\generic</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\generic\varadic_type_checks.h">
+      <Filter>Header Files\prgrmr\generic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test_nike_shoe_factory.cpp">
