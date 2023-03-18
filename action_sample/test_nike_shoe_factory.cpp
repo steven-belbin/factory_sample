@@ -1,42 +1,78 @@
-#include "nike/shoe.h"
+#include "nike/bird.h"
 #include "nike/jordan.h"
 #include "nike/lebron.h"
 #include "nike/madison.h"
 #include "nike/runner.h"
+#include "nike/shoe.h"
 #include "nike/shoe_factory.h"
+#include <concepts>
 #include <initializer_list>
 #include <iostream>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 template<class T>
 void register_constructors(nike::shoe_factory& factory,
                            const nike::shoe_factory::key_type& key)
 {
-   factory.register_function(key, nike::base_constructor(
-                                  []()
-                                  {
-                                     return new T();
-                                  }));
+    if constexpr (std::default_initializable<T> &&
+                  std::constructible_from<T, int, double>)
+    {
+       factory.register_function(key, nike::base_constructor(
+                                      []()
+                                      {
+                                         return std::make_unique<T>();
+                                      }));
 
-   factory.register_function(key, nike::numerics_constructor(
-                                  [](int a, float b)
-                                  {
-                                     return new T(a, b);
-                                  }));
+       factory.register_function(key, nike::numerics_constructor(
+                                      [](int a, float b)
+                                      {
+                                         return std::make_unique<T>(a, b);
+                                      }));
+    }
+    else if constexpr (std::default_initializable<T>)
+    {
+       factory.register_function(key, nike::base_constructor(
+                                      []()
+                                      {
+                                         return std::make_unique<T>();
+                                      }));
+
+       factory.register_function(key, nike::numerics_constructor(
+                                      [&factory, key](int a, float b)
+                                      {
+                                          return factory.construct<nike::base_constructor>(key);
+                                      }));
+    }
+    else if constexpr (std::constructible_from<T, int, double>)
+    {
+       factory.register_function(key, nike::base_constructor(
+                                      [&factory, key]()
+                                      {
+                                          return factory.construct<nike::numerics_constructor>(key, 0, 0.0f);
+                                      }));
+
+       factory.register_function(key, nike::numerics_constructor(
+                                      [&factory, key](int a, float b)
+                                      {
+                                          return std::make_unique<T>(a, b);
+                                      }));
+    }
 }
 
+/****
 /// <summary>
 ///  The nike::runner class doesn't provide a constructor with numerics signature.
 /// 
 ///  Thus, it's possible to register a function that accepts the above signature and will
-///  forward to the factory's registered base constructor instead. 
+///  forward to the factory's registered base constructor instead.
 /// </summary>
 /// 
 /// <remarks>
-///  This is motivating example of being able to construct a class but without having to
-///  alter it in order to comply with different means in which the application would need
-///  to construct it.
+///  This example demonstrates the capability of being able to instantiate an object of
+///  a given class without having to altering that class in order that it complies
+///  with the application's factory.
 /// 
 ///  This case is trivial, but there are situations in which application developers need
 ///  to deserialize the contents from a JSON object or a database record(s) which is 
@@ -48,8 +84,18 @@ void register_constructors(nike::shoe_factory& factory,
 /// 
 ///  This factory approach is ideal then, since application developers whom simply need
 ///  a specific instance invoke the appropriate function from the given factory. While,
-///  only a single developer is needed to provide the implementation to construct that
-///  instance.
+///  allowing developers to provide a shim for the application that instantiates an
+///  instance of the object.
+///
+///  For instance the nike runner only provides a constructor that doesn't accept any
+///  parameters. However, some shoes from the application's factory do take two
+///  floating point parameters.
+///
+///  Show below is that the application is configured at runtime so that second
+///  signatures, which takes two parameters, is wired as to invoke the factory's
+///  function without any parameters. This is called forwarding/chaining the
+///  functions. This is akin to how in C++ a class constructor is allow to invoke
+///  another of that class' constructors member.
 /// </remarks>
 template<>
 void register_constructors<nike::runner>(nike::shoe_factory& factory,
@@ -67,14 +113,17 @@ void register_constructors<nike::runner>(nike::shoe_factory& factory,
                                      return factory.construct<nike::base_constructor>(key);
                                   }));
 }
+*******/
 
-void run_shoe_tests(nike::shoe* shoe)
+void run_shoe_tests(std::unique_ptr<nike::shoe> shoe_ptr)
 {
-    std::unique_ptr<nike::shoe> shoe_ptr{ shoe };
-
     if (shoe_ptr == nullptr)
-        return;
+    {
+       std::cout << "----------  Construction failed.  -------------\n";
+       return;
+    }
 
+    std::cout << "----------  Construction succeeded & now running the 'do_it' method.  -------------\n";
     shoe_ptr->do_it();
 }
 
@@ -116,15 +165,16 @@ void test_factory(nike::shoe_factory& factory,
 
 void configure_application(nike::shoe_factory& factory)
 {
-    register_constructors<nike::jordan>(factory, "jordan");
-    register_constructors<nike::lebron>(factory, "lebron");
-    register_constructors<nike::runner>(factory, "runner");
-    register_constructors<nike::madison>(factory, "madison");
+    register_constructors<nike::bird>   ( factory, "bird"    );
+    register_constructors<nike::jordan> ( factory, "jordan"  );
+    register_constructors<nike::lebron> ( factory, "lebron"  );
+    register_constructors<nike::madison>( factory, "madison" );
+    register_constructors<nike::runner> ( factory, "runner"  );
 }
 
 int run_application(nike::shoe_factory& factory)
 {
-    for(const auto& key : { "jordan", "lebron", "runner", "madison" })
+    for(const auto& key : { "bird", "jordan", "lebron", "madison", "runner" })
     {
         test_factory(factory, key);
     }
@@ -132,16 +182,24 @@ int run_application(nike::shoe_factory& factory)
     return 0;
 }
 
-void compile_zero_delegates()
+#if defined(ZERO_FUNCTIONS_DELEGATE_TEST)
+
+void no_functions_delegate_compiler_check()
 {
     prgrmr::generic::delegate_functions df;
 
     df.invoke<void()>();
 }
 
+#endif
+
 int main()
 {
-   compile_zero_delegates();
+#if defined(ZERO_FUNCTIONS_DELEGATE_TEST)
+
+   no_functions_delegate_compiler_check();
+
+#endif
 
    nike::shoe_factory factory;
 

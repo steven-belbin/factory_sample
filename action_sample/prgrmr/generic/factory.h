@@ -38,7 +38,7 @@ public:
 
    static constexpr auto functions_size = std::tuple_size<functions_type>::value;
 
-   static_assert(functions_size > 0);
+   static_assert(functions_size > 0, "At least one function signature is required.");
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;

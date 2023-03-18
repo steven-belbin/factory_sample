@@ -129,6 +129,7 @@
     <ClCompile Include="test_nike_shoe_factory.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="nike\bird.h" />
     <ClInclude Include="nike\jordan.h" />
     <ClInclude Include="nike\lebron.h" />
     <ClInclude Include="nike\madison.h" />
