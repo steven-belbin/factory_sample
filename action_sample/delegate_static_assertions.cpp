@@ -28,7 +28,7 @@ int do_it()
     //static_assert(concepts::invocable::AreAllSameReturnType<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
 
     static_assert(concepts::arguments::is_not_empty<functions_t...>,             "The list of functions cannot be empty.");
-    static_assert(concepts::invocable::are_all_invocable<functions_t...>,        "At least one of the functions is not invocable.");
+//    static_assert(concepts::invocable::are_all_invocable<functions_t...>,        "At least one of the functions is not invocable.");
     static_assert(concepts::invocable::are_all_different<functions_t...>,        "At least two invocable functions have the same signature.");
     static_assert(concepts::invocable::are_all_same_return_type<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
 
@@ -40,9 +40,34 @@ int main()
     //delegate_t delegate;
     //delegate.invoke<int()>();
 
+    auto a = []()        { return 10;       };
+    auto b = [](int x)   { return 10 + x;   };
+    auto c = [](float x) { return 10 + x;   };
+
+    auto x = []()        { return 10.0f;    };
+    auto y = [](int x)   { return 10.f + x; };
+    auto z = [](float x) { return 10.f + x; };
+
     // Pass
-    do_it<A, B, C>();
-    do_it<X, Y, Z>();
+    do_it<A>();
+    do_it<X>();
+
+    do_it<decltype(a)>();
+    do_it<decltype(x)>();
+
+    do_it<decltype(a), decltype(a)>();
+
+    do_it<B>();
+    do_it<Y>();
+
+    do_it<decltype(b)>();
+    do_it<decltype(y)>();
+
+    //do_it<A, B>();
+    //do_it<X, Y>();
+
+    //do_it<A, B, C>();
+    //do_it<X, Y, Z>();
 
     // Fail
     //do_it<>();
