@@ -22,6 +22,9 @@
     <Filter Include="Header Files\prgrmr\generic">
       <UniqueIdentifier>{4221d302-cb45-45ad-9a4a-ab5015917fb4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\prgrmr\concepts">
+      <UniqueIdentifier>{4685c6f4-ee34-4783-9ec1-fbd3d481636b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nike\shoe.h">
@@ -57,9 +60,21 @@
     <ClInclude Include="nike\bird.h">
       <Filter>Header Files\nike</Filter>
     </ClInclude>
+    <ClInclude Include="prgrmr\concepts\concepts.h">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\invocable.h">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\arguments.h">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test_nike_shoe_factory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="delegate_static_assertions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

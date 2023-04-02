@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../concepts/arguments.h"
+#include "../concepts/concepts.h"
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -8,6 +10,10 @@
 
 namespace prgrmr::generic
 {
+
+template<typename function_t, typename... functions_t>
+concept is_all_same = (... && std::is_same<function_t, functions_t>::value);
+
 template<class function_t>
 function_t build_functions_type(function_t&& function)
 {
@@ -20,6 +26,12 @@ std::tuple<functions_t...> build_functions_type(functions_t&&... functions)
    return std::make_tuple(build_functions_type<functions_t>(functions)...);
 }
 
+template<typename... functions_t>
+concept do_functions_return_same_type =
+  std::conjunction_v<std::is_same<typename std::invoke_result<functions_t>::type,
+                                  typename std::invoke_result<functions_t, functions_t>::type>...>;
+
+
 ///
 /// <summary>
 ///   The delegate_functions class is a function delegate that supports multiple functions but which different
@@ -30,15 +42,20 @@ std::tuple<functions_t...> build_functions_type(functions_t&&... functions)
 /// <remarks>to do : add a compile-time check to ensure that each function returns the same type.</remarks>
 /// <remarks>to do : add a compile-time check to prevent multiple occurrences of the same function signature.</remarks>
 ///
+/// 
 template<class... functions_t>
 class delegate_functions final
 {
 public:
    using functions_type = std::tuple<functions_t...>;
 
-   static constexpr auto functions_size = std::tuple_size<functions_type>::value;
+   static_assert(concepts::arguments::IsNotEmpty<functions_t>, "The list of functions cannot be empty.");
 
-   static_assert(functions_size > 0, "At least one function signature is required.");
+   static_assert(concepts::invocable::AreAllSameReturnType<functions_t>,
+                 "At least one of the invocable functions doesn't produce the same return type.");
+
+   static_assert(concepts::invocable::AreAllDifferent<functions_t>,
+                 "At least two invocable functions have the same signature.");
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
@@ -282,6 +299,10 @@ public:
 private:
    functions_type _functions;
 };
+
+// how to ensure that all variadic functions are unique?
+// how to ensure that all variadic functions are unique?
+
 
 ///
 /// <summary>

@@ -16,48 +16,41 @@ template<class T>
 void register_constructors(nike::shoe_factory& factory,
                            const nike::shoe_factory::key_type& key)
 {
-    if constexpr (std::default_initializable<T> &&
-                  std::constructible_from<T, int, double>)
-    {
-       factory.register_function(key, nike::base_constructor(
-                                      []()
-                                      {
-                                         return std::make_unique<T>();
-                                      }));
+    using base     = nike::base_constructor;
+    using numerics = nike::numerics_constructor;
 
-       factory.register_function(key, nike::numerics_constructor(
-                                      [](int a, float b)
-                                      {
-                                         return std::make_unique<T>(a, b);
-                                      }));
+    if constexpr (std::default_initializable<T>)
+    {
+       factory.register_function<base>(key, std::make_unique<T>);
+    }
+
+    if constexpr (std::constructible_from<T, int, double>)
+    {
+       factory.register_function<numerics>(key, std::make_unique<T, int, float>);
+    }
+
+    if constexpr (std::default_initializable<T> &&
+                  std::constructible_from<T, int, float>)
+    {
+       ;
     }
     else if constexpr (std::default_initializable<T>)
     {
-       factory.register_function(key, nike::base_constructor(
-                                      []()
-                                      {
-                                         return std::make_unique<T>();
-                                      }));
-
-       factory.register_function(key, nike::numerics_constructor(
-                                      [&factory, key](int a, float b)
-                                      {
-                                          return factory.construct<nike::base_constructor>(key);
-                                      }));
+       factory.register_function<numerics>
+       (
+        key,
+        [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
+           { return factory.construct<base>(key); }
+       );
     }
-    else if constexpr (std::constructible_from<T, int, double>)
+    else if constexpr (std::constructible_from<T, int, float>)
     {
-       factory.register_function(key, nike::base_constructor(
-                                      [&factory, key]()
-                                      {
-                                          return factory.construct<nike::numerics_constructor>(key, 0, 0.0f);
-                                      }));
-
-       factory.register_function(key, nike::numerics_constructor(
-                                      [&factory, key](int a, float b)
-                                      {
-                                          return std::make_unique<T>(a, b);
-                                      }));
+       factory.register_function<base>
+       (
+        key,
+        [&factory, key]()
+           { return factory.construct<numerics>(key, 0, 0.0f); }
+       );
     }
 }
 
@@ -182,11 +175,34 @@ int run_application(nike::shoe_factory& factory)
     return 0;
 }
 
+//#define ZERO_FUNCTIONS_DELEGATE_TEST
+
 #if defined(ZERO_FUNCTIONS_DELEGATE_TEST)
 
-void no_functions_delegate_compiler_check()
+template<typename ...T>
+int check_empty()
 {
-    prgrmr::generic::delegate_functions df;
+    //static_assert(sizeof ... (T) >= 1, "Requires at least one argument.");
+    //static_assert(prgrmr::concepts::arguments::AtLeast<1, T...>, "Requires at least one argument.");
+    //static_assert(prgrmr::concepts::arguments::IsSingle<T...>, "Requires exactly one arguement.");
+    //static_assert(prgrmr::concepts::arguments::IsPair<T...>, "Requires exactly two arguements.");
+    //static_assert(prgrmr::concepts::arguments::IsEmpty<T...>, "Should have no args.");
+    //static_assert(prgrmr::concepts::arguments::IsNotEmpty<T...>, "Should have some args.");
+
+    return 10;
+}
+
+//void no_functions_delegate_compiler_check()
+//{
+//    prgrmr::generic::delegate_functions df;
+//
+//    df.invoke<void()>();
+//}
+
+void different_return_types_functions_delegate_compiler_check()
+{
+    prgrmr::generic::delegate_functions<std::function<int ()>,
+                                        std::function<double (int)>> df;
 
     df.invoke<void()>();
 }
@@ -197,7 +213,12 @@ int main()
 {
 #if defined(ZERO_FUNCTIONS_DELEGATE_TEST)
 
-   no_functions_delegate_compiler_check();
+   //check_empty<int, float, double>();
+   //check_empty<>();
+
+   // no_functions_delegate_compiler_check();
+
+   different_return_types_functions_delegate_compiler_check();
 
 #endif
 
