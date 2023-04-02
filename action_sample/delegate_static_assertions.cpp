@@ -28,8 +28,8 @@ int do_it()
     //static_assert(concepts::invocable::AreAllSameReturnType<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
 
     static_assert(concepts::arguments::is_not_empty<functions_t...>,             "The list of functions cannot be empty.");
-//    static_assert(concepts::invocable::are_all_invocable<functions_t...>,        "At least one of the functions is not invocable.");
-    static_assert(concepts::invocable::are_all_different<functions_t...>,        "At least two invocable functions have the same signature.");
+    //static_assert(concepts::invocable::are_all_invocable<functions_t...>,        "At least one of the functions is not invocable.");
+    //static_assert(concepts::invocable::are_all_different<functions_t...>,        "At least two invocable functions have the same signature.");
     static_assert(concepts::invocable::are_all_same_return_type<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
 
     return 0;
@@ -55,7 +55,7 @@ int main()
     do_it<decltype(a)>();
     do_it<decltype(x)>();
 
-    do_it<decltype(a), decltype(a)>();
+    do_it<decltype(a), decltype(a), decltype(a), decltype(x)>();
 
     do_it<B>();
     do_it<Y>();
