@@ -7,93 +7,97 @@
 
 namespace prgrmr::concepts::invocable
 {
+///
+/// Expression that evaluates that there all arguments are invocable functions.
+///
+/// There is a requirement that there must be at least one arguement.
+///
+template<typename Function>
+concept Invocable = std::invocable<Function>;
 
 ///
-/// Concept verifying that two invocable functions return the same return type.
+/// Expression that evaluates that there all arguments are invocable functions.
+///
+/// There is a requirement that there must be at least one arguement.
+///
+template<typename ... Functions>
+    requires((arguments::IsNotEmpty<Functions...> && Invocable<Functions>) && ...)
+inline constexpr bool are_all_invocable = true;
+
+///
+/// Concept to enforce that all arguments are invocable functions.
+///
+template<typename ... Functions>
+concept AreAllInvocable = are_all_invocable<Functions...>;
+
+///
+/// Expression that evaluates if a pair of invocable functions' return types are the same type.
+///
+template<Invocable LHS, Invocable RHS>
+inline constexpr bool is_same_return_type = std::is_same_v<typename std::invoke_result<LHS>::type,
+                                                           typename std::invoke_result<RHS>::type>;
+
+///
+/// Concept to enforce that two invocable functions' return types shall be of the same type.
 ///
 template<typename LHS, typename RHS>
-concept IsSameReturnType = std::invocable<LHS>
-                        && std::invocable<RHS>
-                        && std::is_same_v<typename std::invoke_result<LHS>::type,
-                                          typename std::invoke_result<RHS>::type>;
+concept IsSameReturnType = is_same_return_type<LHS, RHS>;
 
 ///
-/// Expression to indicate if the given sequence of arguments represents a
-/// sequence invocable functions ALL of which return the same type.
+/// Expression that evaluates if all the invocable functions' return types are of the same type.
 ///
-template<typename LHS, typename RHS>
-requires (std::invocable<LHS> && std::invocable<RHS>)
-inline constexpr bool are_same_return_type = std::is_same_v<typename std::invoke_result<LHS>::type,
-                                                            typename std::invoke_result<RHS>::type>;
+template<typename ... Functions>
+  requires(AreAllInvocable<Functions...>)
+inline constexpr bool are_all_same_return_type = true;
 
 ///
-/// Expression to indicate if the given sequence of arguments represents a
-/// sequence invocable functions ALL of which return the same type.
+/// Expression that evaluates if all the invocable functions' return types are of the same type.
 ///
 template<typename Head, typename...Tail>
-inline constexpr bool are_all_same_return_type = (are_same_return_type<Head, Tail> && ...);
+inline constexpr bool are_all_same_return_type<Head, Tail...> = (is_same_return_type<Head, Tail> && ...);
 
 ///
-/// Concept to verify if the given sequence of arguments represents a
-/// sequence invocable functions ALL of which return the same type.
+/// Concept to enforce that all invocable functions' return types shall be of the same type.
 ///
-template<typename Head, typename ...Tail>
-concept AreAllSameReturnType = are_all_same_return_type<Head, Tail...>;
+template<typename ... Functions>
+concept AreAllSameReturnType = are_all_same_return_type<Functions...>;
 
 ///
-/// Concept verifying that a pair of invocable functions are considered as being the same.
+/// Expression that evaluates if a pair of invocable functions are the same.
+///
+template<Invocable LHS, Invocable RHS>
+inline constexpr bool is_same = std::is_same_v<LHS, RHS>;
+
+///
+/// Expression that evaluates if a pair of invocable functions are the different.
+///
+template<Invocable LHS, Invocable RHS>
+inline constexpr bool is_different = !is_same<LHS, RHS>;
+
+///
+/// Concept to enforce that a pair of invocable functions are to be different.
 ///
 template<typename LHS, typename RHS>
-concept IsSame = std::invocable<LHS>
-              && std::invocable<RHS>
-              && std::is_same_v<LHS, RHS>;
+concept IsDifferent = is_different<LHS, RHS>;
 
 ///
-/// Concept verifying that a pair of invocable functions are considered as being the different.
+/// Expression that evaluates if all invocable functions are the same.
 ///
-template<typename LHS, typename RHS>
-concept IsDifferent = !IsSame<LHS, RHS>;
+template<typename ... Functions>
+    requires(AreAllInvocable<Functions...>)
+inline constexpr bool are_all_different = true;
 
 ///
-/// Expression that indicates that the given arguments represents a sequence of invocable functions that are all
-/// different from each other.
+/// Expression that evaluates if all the invocable functions are same type.
 ///
-/// This is the default implementation for when there one argument or none.
-///
-template <typename...Functions>
-inline constexpr bool are_all_different = arguments::IsEmpty<Functions>
-                                       || (arguments::IsSingle<Functions> && std::invocable<Functions>);
-
-///
-/// Expression that indicates that the given arguments represents a sequence of invocable functions that are all
-/// different from each other.
-///
-template <typename Head, typename ... Tail>
-inline constexpr bool are_all_different<Head, Tail...> = IsDifferent<Head, Tail...>
+template<typename Head, typename...Tail>
+inline constexpr bool are_all_different<Head, Tail...> = (is_different<Head, Tail> && ...)
                                                       && are_all_different<Tail...>;
 
 ///
-/// Concept verifying that the given arguments represents a sequence of invocable functions that are all different from each other.
+/// Concept to enforce that all invocable functions shall be different.
 ///
-template<typename Functions>
-concept AreAllDifferent = are_all_different<Functions>;
-
 template<typename ... Functions>
-    requires (std::invocable<Functions> && ...)
-inline constexpr bool are_all_invocable = true;
-
-template<typename Functions>
-concept AreAllInvocable = are_all_invocable<Functions>;
-
-/////
-///// Expression to check if the given pair of invocable functions are the same.
-///// 
-//template <typename LHS, typename RHS>
-//inline constexpr bool is_pair_unique_invocable = std::invocable<LHS>
-//                                              && std::invocable<RHS>
-//                                              && !std::is_same_v<LHS, RHS>;
-
-//template<typename ... head_t>
-//concept AreAllInvocable = AreAllInvocable<head_t...>;
+concept AreAllDifferent = are_all_different<Functions...>;
 
 }
