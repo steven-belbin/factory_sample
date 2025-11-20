@@ -12,6 +12,39 @@
 #include <type_traits>
 #include <vector>
 
+/// <summary>
+/// Automatically registers the given class <T> constructors into the
+/// class factory for the given key.
+/// 
+/// If the class <T> has a default constructor, then it will be registered
+/// into the factory when invoking without any parameters. Likewise, if
+/// the class <T> has a constructor that accepts an int and a float, then
+/// then it will be registered as the numerics constructor signature.
+/// </summary>
+/// <typeparam name="T"></typeparam>
+/// <param name="factory"></param>
+/// <param name="key"></param>
+/// <remarks>
+/// This is meant as a convenience function to reduce boilerplate code when
+/// the class <T> provides the expected constructors.
+/// </remarks>
+/// <todo>
+/// Implement as a generic function that it supports any factory &
+/// derived class from the base type.
+///
+/// A challenge is that std::make_unique<T, Args...> returns the
+/// std::unique_ptr<derived class type> whereas typically the
+/// factory's registered constructors return std::unique_ptr<base class type>.
+/// </todo>
+/// <todo>
+/// Implement as a generic function that iterates through the signatures
+/// that the factory supports & registers the constructors of class <T>.
+///
+/// This example is hardcoded for a default initializer & a constructor
+/// that accepts an int & a float. However, a more generic approach might
+/// reduce boilerplate code when registering classes with many constructors.
+/// </todo>
+
 template<class T>
 void register_constructors(nike::shoe_factory& factory,
                            const nike::shoe_factory::key_type& key)
@@ -19,38 +52,38 @@ void register_constructors(nike::shoe_factory& factory,
     using base     = nike::base_constructor;
     using numerics = nike::numerics_constructor;
 
+    std::cout << "============================================================================================\n";
+    std::cout << "                         Registering " << key << " constructors.\n";
+    std::cout << "============================================================================================\n";
+
     if constexpr (std::default_initializable<T>)
     {
        factory.register_function<base>(key, std::make_unique<T>);
+       std::cout << "Registered the 'default initializable' constructor.\n";
     }
 
     if constexpr (std::constructible_from<T, int, double>)
     {
        factory.register_function<numerics>(key, std::make_unique<T, int, float>);
+       std::cout << "Registered the 'numerics' constructor.\n";
     }
 
-    if constexpr (std::default_initializable<T> &&
-                  std::constructible_from<T, int, float>)
+    if constexpr (std::default_initializable<T> && !std::constructible_from<T, int, float>)
     {
-       ;
+      auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
+                 { return factory.construct<base>(key); };
+
+      factory.register_function<numerics>(key, std::move(fun));
+      std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
     }
-    else if constexpr (std::default_initializable<T>)
+
+    if constexpr (!std::default_initializable<T> && std::constructible_from<T, int, float>)
     {
-       factory.register_function<numerics>
-       (
-        key,
-        [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
-           { return factory.construct<base>(key); }
-       );
-    }
-    else if constexpr (std::constructible_from<T, int, float>)
-    {
-       factory.register_function<base>
-       (
-        key,
-        [&factory, key]()
-           { return factory.construct<numerics>(key, 0, 0.0f); }
-       );
+      auto fun = [&factory, key]()
+                 { return factory.construct<numerics>(key, 0, 0.0f); };
+
+      factory.register_function<base>(key, fun);
+      std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
     }
 }
 
@@ -156,7 +189,7 @@ void test_factory(nike::shoe_factory& factory,
    std::cout << "\n============================================================================================\n\n";
 }
 
-void configure_application(nike::shoe_factory& factory)
+void configure_shoe_factory(nike::shoe_factory& factory)
 {
     register_constructors<nike::bird>   ( factory, "bird"    );
     register_constructors<nike::jordan> ( factory, "jordan"  );
@@ -224,7 +257,7 @@ int main()
 
    nike::shoe_factory factory;
 
-   configure_application(factory);
+   configure_shoe_factory(factory);
 
    return run_application(factory);
 }
