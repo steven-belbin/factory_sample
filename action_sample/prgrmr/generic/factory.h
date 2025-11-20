@@ -15,15 +15,15 @@ template<typename function_t, typename... functions_t>
 concept is_all_same = (... && std::is_same<function_t, functions_t>::value);
 
 template<class function_t>
-function_t build_functions_type(function_t&& function)
+std::decay_t<function_t> build_functions_type(function_t&& function)
 {
-   return std::move(function);
+   return std::forward<function_t>(function);
 }
 
 template<class... functions_t>
-std::tuple<functions_t...> build_functions_type(functions_t&&... functions)
+std::tuple<std::decay_t<functions_t>...> build_functions_type(functions_t&&... functions)
 {
-   return std::make_tuple(build_functions_type<functions_t>(functions)...);
+   return std::make_tuple(build_functions_type<functions_t>(std::forward<functions_t>(functions))...);
 }
 
 template<typename... functions_t>
@@ -49,13 +49,13 @@ class delegate_functions final
 public:
    using functions_type = std::tuple<functions_t...>;
 
-   static_assert(concepts::arguments::IsNotEmpty<functions_t>, "The list of functions cannot be empty.");
+   static_assert(concepts::arguments::IsNotEmpty<functions_t...>, "The argument list cannot be empty.");
 
-   static_assert(concepts::invocable::AreAllSameReturnType<functions_t>,
-                 "At least one of the invocable functions doesn't produce the same return type.");
+   static_assert(concepts::invocable::IsSameResultType<functions_t...>,
+                 "The argument list contains at least one function doesn't return the same type.");
 
-   static_assert(concepts::invocable::AreAllDifferent<functions_t>,
-                 "At least two invocable functions have the same signature.");
+   static_assert(concepts::invocable::IsDifferentSignatures<functions_t...>,
+                 "The argument list contains at least one pair of functions having the same signature.");
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
@@ -651,9 +651,6 @@ public:
    key_class_factory(key_class_factory&&) = default;
 
    ~key_class_factory() = default;
-
-   key_class_factory& operator=(const key_class_factory&) = default;
-   key_class_factory& operator=(key_class_factory&&) = default;
 
    ///
    /// <summary>

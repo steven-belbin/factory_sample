@@ -1,78 +1,38 @@
 #include <prgrmr/concepts/concepts.h>
-#include <prgrmr/generic/factory.h>
+#include <iostream>
 
 using namespace prgrmr;
-using namespace prgrmr::generic;
 
-using A = std::function<int ()>;
-using B = std::function<int (int)>;
-using C = std::function<int (float)>;
-
-using X = std::function<float ()>;
-using Y = std::function<float (int)>;
-using Z = std::function<float (float)>;
-
-using AA = std::function<int()>;
-
-
-//using delegate_t = delegate_functions<>;
-//using delegate_t = delegate_functions<A, X>;
-//using delegate_t = delegate_functions<A, B, A>;
-
-template<typename ... functions_t>
-int do_it()
+template<typename ... Invocables>
+inline constexpr void static_assert_invocable_concepts()
 {
-    //static_assert(concepts::arguments::IsNotEmpty<functions_t...>,           "The list of functions cannot be empty.");
-    //static_assert(concepts::invocable::AreAllInvocable<functions_t...>, "At least one of the functions is not invocable.");
-    //static_assert(concepts::invocable::AreAllDifferent<functions_t...>,      "At least two invocable functions have the same signature.");
-    //static_assert(concepts::invocable::AreAllSameReturnType<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
-
-    static_assert(concepts::arguments::is_not_empty<functions_t...>,             "The list of functions cannot be empty.");
-    //static_assert(concepts::invocable::are_all_invocable<functions_t...>,        "At least one of the functions is not invocable.");
-    //static_assert(concepts::invocable::are_all_different<functions_t...>,        "At least two invocable functions have the same signature.");
-    static_assert(concepts::invocable::are_all_same_return_type<functions_t...>, "At least one of the invocable functions doesn't produce the same return type.");
-
-    return 0;
+    static_assert(concepts::arguments::IsNotEmpty<Invocables...>, "The list of invocables cannot be empty.");
+    static_assert(concepts::invocable::IsDifferentSignatures<Invocables...>, "The list of invocables contains at least one pair that have the same signature.");
+    static_assert(concepts::invocable::IsSameResultType<Invocables...>, "The list of invocables contains at least one entry whose result type is different from the rest.");
 }
 
 int main()
 {
-    //delegate_t delegate;
-    //delegate.invoke<int()>();
-
-    auto a = []()        { return 10;       };
+    auto a = [](int x)   { return 10;       };
     auto b = [](int x)   { return 10 + x;   };
     auto c = [](float x) { return 10 + x;   };
+    auto d = [](char x)  { return int(x); };
 
     auto x = []()        { return 10.0f;    };
     auto y = [](int x)   { return 10.f + x; };
     auto z = [](float x) { return 10.f + x; };
 
-    // Pass
-    do_it<A>();
-    do_it<X>();
+    // Doesn't compile since the invocable have the same signature.
+    // assert_invocable_concepts<decltype(a), decltype(b)>();
 
-    do_it<decltype(a)>();
-    do_it<decltype(x)>();
+    // Doesn't compile since the invocable have different result types.
+    // assert_invocable_concepts<decltype(a), decltype(c)>();
 
-    do_it<decltype(a), decltype(a), decltype(a), decltype(x)>();
+    // Compiles, since the result types are the same & they have different signatures.
+    static_assert_invocable_concepts<decltype(a), decltype(d)>();
 
-    do_it<B>();
-    do_it<Y>();
-
-    do_it<decltype(b)>();
-    do_it<decltype(y)>();
-
-    //do_it<A, B>();
-    //do_it<X, Y>();
-
-    //do_it<A, B, C>();
-    //do_it<X, Y, Z>();
-
-    // Fail
-    //do_it<>();
-    //do_it<A, A, AA>();
-    //do_it<A, B, A>();
+    // Compiles, since the result types are the same & they have different signatures.
+    static_assert_invocable_concepts<decltype(x), decltype(y), decltype(z)>();
 
     return 0;
 }
