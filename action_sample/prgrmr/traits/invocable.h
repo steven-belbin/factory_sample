@@ -20,7 +20,7 @@ struct invocable_detail
 };
 
 template<typename Invocable>
-struct invocable {};
+struct invocable;
 
 ///
 /// std::function specialization
@@ -67,13 +67,8 @@ struct invocable<Result(C::*)(Arguments...) const volatile> : invocable_detail<R
 ///
 /// Catch all: functor/lambda -> use &T::operator() to deduce signature
 ///
-/// <todo>
-/// This currently does not work with generic lambdas.
-/// </todo>
-///
-//template<typename Invocable>
-//struct invocable<decltype(&std::remove_reference_t<Invocable>::operator())> {};
-//
+template<typename Invocable>
+struct invocable : invocable<decltype(&std::remove_reference_t<Invocable>::operator())> {};
 
 ///
 /// Get an invocable's result type.
