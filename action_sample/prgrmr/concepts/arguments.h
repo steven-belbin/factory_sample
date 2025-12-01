@@ -1,51 +1,43 @@
 #pragma once
 
+#include "../traits/arguments.h"
 #include <cstddef>
 
 namespace prgrmr::concepts::arguments
 {
-template<std::size_t Count, typename ... Arguments>
-inline constexpr bool is_count_equal = sizeof...(Arguments) == Count;
-
 ///
-/// Mnemonic concept to check the number of template arguments is equal to the count.
+/// Concept to check the number of template arguments is equal to the count.
 ///
 template<std::size_t Count, typename ... Arguments>
-concept IsCountEqual = sizeof...(Arguments) == Count;
-
-template<std::size_t Count, typename ... Arguments>
-inline constexpr bool is_empty = sizeof...(Arguments) == 0;
+concept IsCountEqual = traits::arguments::is_count_equal<Count, Arguments...>;
 
 ///
-/// Mnemonic concept to check for when there aren't any arguments.
+/// Concept to check for when there aren't any arguments.
 ///
 template<typename ... Arguments>
-concept IsEmpty = IsCountEqual<0, Arguments...>;
-
-template<typename ... Arguments>
-inline constexpr bool is_not_empty = sizeof...(Arguments) > 0;
+concept IsEmpty = traits::arguments::is_empty<Arguments...>;
 
 ///
-/// Mnemonic concept to check for when there aren't any arguments.
+/// Concept to check for when there aren't any arguments.
 ///
 template<typename ... Arguments>
-concept IsNotEmpty = !IsEmpty<Arguments...>;
+concept IsNotEmpty = traits::arguments::is_not_empty<Arguments...>;
 
 ///
-/// Mnemonic concept to check for when there aren't any arguments.
+/// Concept to check for when there aren't any arguments.
 ///
 template<std::size_t Count, typename ... Arguments>
-concept AtLeast = sizeof...(Arguments) >= Count;
+concept IsAtLeast = traits::arguments::is_at_least<Count, Arguments...>;
 
 ///
-/// Mnemonic concept to check for when there is precisely one argument.
+/// Concept to check for when there is precisely one argument.
 ///
 template<typename ... Arguments>
-concept IsSingle = IsCountEqual<1, Arguments...>;
+concept IsSingle = traits::arguments::is_single<Arguments...>;
 
 ///
-/// Mnemonic concept to check for when there are precisely a pair of arguments.
+/// Concept to check for when there are precisely a pair of arguments.
 ///
 template<typename ... Arguments>
-concept IsPair = IsCountEqual<2, Arguments...>;
+concept IsPair = traits::arguments::is_pair<Arguments...>;
 }

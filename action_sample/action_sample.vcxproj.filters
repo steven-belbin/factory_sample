@@ -25,6 +25,9 @@
     <Filter Include="Header Files\prgrmr\concepts">
       <UniqueIdentifier>{4685c6f4-ee34-4783-9ec1-fbd3d481636b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\prgrmr\traits">
+      <UniqueIdentifier>{23cae576-4554-4807-946d-1d16fa76009e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nike\shoe.h">
@@ -68,6 +71,12 @@
     </ClInclude>
     <ClInclude Include="prgrmr\concepts\arguments.h">
       <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\traits\arguments.h">
+      <Filter>Header Files\prgrmr\traits</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\traits\invocable.h">
+      <Filter>Header Files\prgrmr\traits</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
