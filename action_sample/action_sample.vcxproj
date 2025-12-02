@@ -127,12 +127,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="delegate_static_assertions.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="test_nike_shoe_factory.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="test_nike_shoe_factory.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +143,7 @@
     <ClInclude Include="nike\runner.h" />
     <ClInclude Include="nike\shoe.h" />
     <ClInclude Include="nike\shoe_factory.h" />
+    <ClInclude Include="nike\shoe_factory_configuration.h" />
     <ClInclude Include="prgrmr\concepts\arguments.h" />
     <ClInclude Include="prgrmr\concepts\concepts.h" />
     <ClInclude Include="prgrmr\concepts\invocable.h" />
