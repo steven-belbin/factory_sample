@@ -82,28 +82,33 @@ void register_constructors(shoe_factory& factory,
 }
 
 /// <summary>
-///  Let's override the registeration of 'runner' derived class.
+///  Demonstrate that it's possible to override the registration of 'runner' derived class.
 /// </summary>
 ///
 /// <remarks>
-///  It doesn't provide a constructor for numerics therefore provide a lambda that
-///  is the same signature as the numerics constructor that simply invokes the
-///  factory's base constructor to create the instance.
+///  The 'runner' derived class only has a default constructor, therefore register
+///  its numerics constructor using an lambda adaptor that simply invokes the
+///  factory's base constructor for this key.
+/// </remarks>
 template<>
 void register_constructors<runner>(shoe_factory& factory,
                                    const shoe_factory::key_type& key)
 {
-   factory.register_function(key, base_constructor(
-                                  []()
-                                  {
-                                     return std::make_unique<runner>();
-                                  }));
+   factory.register_function<base_constructor>(
+      key,
+      []()
+      {
+         return std::make_unique<runner>();
+      }
+   );
 
-   factory.register_function(key, numerics_constructor(
-                                  [&factory, key](int a, float b)
-                                  {
-                                     return factory.construct<base_constructor>(key);
-                                  }));
+   factory.register_function<numerics_constructor>(
+      key,
+      [&factory, &key](int, float)
+      {
+         return factory.construct<base_constructor>(key);
+      }
+   );
 }
 
 /// <summary>

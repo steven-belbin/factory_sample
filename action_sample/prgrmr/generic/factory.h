@@ -688,6 +688,26 @@ public:
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    /// <param name="functions">The functions that are to be registered.</param>
    ///
+   /// <todo>
+   ///   When providing lambda functions this requires explicitly specifying the functions' signature.
+   ///      <code>
+   ///          factory.register_functions(
+   ///              key,
+   ///              base_constructor{ []() { return std::make_unique<runner>(); } },
+   ///              numeric_constructor{ [&factory, &key](int a, float b) { return factory.construct(key); } }
+   ///          );
+   ///      </code>
+   ///
+   ///   It would be useful to code as:
+   ///      <code>
+   ///          factory.register_function(
+   ///              key,
+   ///              []() { return std::make_unique<runner>(); }
+   ///              [&factory, &key](int a, float b) { return factory.construct(key); }
+   ///          );
+   ///      </code>
+   /// </todo>
+   ///
    void register_functions(const key_type& key,
                            function_types functions)
    {
@@ -713,6 +733,29 @@ public:
    ///
    /// <param name="key">The unique identifying key to associate with this function.</param>
    /// <param name="function">The function that is to be registered.</param>
+   ///
+   /// <todo>
+   ///   When providing a lambda function this requires explicitly specifying the function's signature.
+   ///      <code>
+   ///          factory.register_function<numeric_constructor>(
+   ///              key,
+   ///              [](int a, float b) { return std::make_unique<runner>(); }
+   ///          );
+   ///
+   ///          factory.register_function(
+   ///              key,
+   ///              numeric_constructor{ [&factory, &key](int a, float b) { return factory.construct(key); } }
+   ///          );
+   ///      </code>
+   ///
+   ///   It would be useful to code as:
+   ///      <code>
+   ///          factory.register_function(
+   ///              key,
+   ///              [&factory, &key](int a, float b) { return factory.construct(key); }
+   ///          );
+   ///      </code>
+   /// </todo>
    ///
    template<class function_t>
    void register_function(const key_type& key,
