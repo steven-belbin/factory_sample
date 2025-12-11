@@ -149,8 +149,6 @@
     <ClInclude Include="prgrmr\concepts\invocable.h" />
     <ClInclude Include="prgrmr\generic\class_name.h" />
     <ClInclude Include="prgrmr\generic\factory.h" />
-    <ClInclude Include="prgrmr\generic\function_signature_checks.h" />
-    <ClInclude Include="prgrmr\generic\varadic_type_checks.h" />
     <ClInclude Include="prgrmr\traits\invocable.h" />
   </ItemGroup>
   <ItemGroup>

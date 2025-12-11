@@ -38,7 +38,7 @@ template<class... functions_t>
 class delegate_functions final
 {
 public:
-   using functions_type = std::tuple<std::decay<functions_t>...>;
+   using functions_type = std::tuple<std::decay_t<functions_t>...>;
 
    template<typename function_t>
    using stored_type = std::decay_t<function_t>;
@@ -63,14 +63,14 @@ public:
    template<class function_t>
    delegate_functions(function_t&& function)
    {
-      std::get<stored_type<function_t>>(_functions) = std::forward(function);
+      std::get<stored_type<function_t>>(_functions) = std::forward<function_t>(function);
    }
 
    template<class function_t, class... functions_t>
    delegate_functions(function_t&& function, functions_t&&... functions)
    {
-      std::get<stored_type<function_t>>(_functions) = std::forward(function);
-      delegate_functions<function_t>(functions...);
+      std::get<stored_type<function_t>>(_functions) = std::forward<function_t>(function);
+      // (std::get<stored_type<functions_t>>(_functions) = std::forward<functions_t>(functions), ...);
    }
 
    /////
@@ -195,7 +195,7 @@ public:
    template<class function_t>
    void register_function(function_t&& function)
    {
-      std::get<stored_type<function_t>>(_functions) = std::forward(function);
+      std::get<stored_type<function_t>>(_functions) = std::forward<function_t>(function);
    }
 
    ///
@@ -480,11 +480,14 @@ public:
    template<class function_t>
    auto get_function(const key_type& key) const
    {
-      const auto& iter = _delegates.find(key);
+      using delegate_ref_t = delegate_type;
+      using stored_return_t = std::decay_t<decltype(std::declval<delegate_ref_t>().get_function<function_t>())>;
+
+      const auto iter = _delegates.find(key);
 
       return (iter != std::end(_delegates))
-           ? iter->second.get_function<function_t>()
-           : decltype(iter->second.get_function<function_t>())(nullptr);
+           ? stored_return_t{ iter->second.get_function<function_t>() }
+           : stored_return_t{};
    }
 
    ///
@@ -497,11 +500,14 @@ public:
    template<int index_t>
    auto get_function(const key_type& key) const
    {
-      const auto& iter = _delegates.find(key);
+     using delegate_ref_t = delegate_type;
+     using stored_return_t = std::decay_t<decltype(std::declval<delegate_ref_t>().get_function<index_t>())>;
 
-      return (iter != std::end(_delegates))
-           ? iter->second.get_function<index_t>()
-           : decltype(iter->second.get_function<index_t>())(nullptr);
+     const auto iter = _delegates.find(key);
+
+     return (iter != std::end(_delegates))
+          ? stored_return_t{ iter->second.get_function<index_t>() }
+          : stored_return_t{};
    }
 
    ///
@@ -632,7 +638,7 @@ class key_class_factory final
 {
 public:
    typedef key_t key_type;
-   using function_types = std::tuple<std::decay<functions_t>...>;
+   using function_types = std::tuple<std::decay_t<functions_t>...>;
    typedef key_delegates_functions<key_type, functions_t...> key_delegates_type;
    typedef typename key_delegates_type::delegate_type delegate_type;
 
@@ -820,13 +826,23 @@ public:
    ///
    template<class function_t, class... args_t>
    auto construct(const key_type& key,
-                  args_t&&... args) const -> typename function_t::result_type
+                  args_t&&... args) const
    {
-      const auto& function = _delegates.get_function<function_t>(key);
+      using result_type = traits::invocable::invocable_result_t<function_t>;
 
-      return (function)
-           ? function(std::forward<args_t>(args)...)
-           : nullptr;
+      const auto function = get_function<function_t>(key);
+
+      if (function)
+      {
+        return function(std::forward<args_t>(args)...);
+      }
+
+      if constexpr (std::is_pointer_v<result_type> || std::is_same_v<result_type, std::nullptr_t>)
+      {
+        return result_type{nullptr};
+      }
+
+      return result_type{};
    }
 
    ///
@@ -843,11 +859,22 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-      const auto& function = _delegates.get_function<index_t>(key);
+     using stored_fn_t = std::tuple_element_t<index_t, function_types>;
+     using result_type = traits::invocable::invocable_result_t<stored_fn_t>;
 
-      return (function)
-           ? function(std::forward<args_t>(args)...)
-           : decltype(function(std::forward<args_t>(args)...))(nullptr);
+     const auto function = get_function<index_t>(key);
+
+     if (function)
+     {
+         return function(std::forward<args_t>(args)...);
+     }
+
+     if constexpr (std::is_pointer_v<result_type> || std::is_same_v<result_type, std::nullptr_t>)
+     {
+         return result_type{ nullptr };
+     }
+
+     return result_type{};
    }
 
    ///

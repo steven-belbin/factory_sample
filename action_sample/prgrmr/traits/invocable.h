@@ -16,7 +16,7 @@ template<typename Result, typename ...Arguments>
 struct invocable_detail
 {
     using result_type = Result;
-    using signature_type = typename std::decay_t<result_type>(Arguments...);
+    using signature_type = Result(Arguments...);
 };
 
 template<typename Invocable>
