@@ -81,6 +81,16 @@ void register_constructors(shoe_factory& factory,
     }
 }
 
+inline std::unique_ptr<shoe> make_runner_base()
+{
+    return std::make_unique<runner>();
+}
+
+inline std::unique_ptr<shoe> make_runner_numeric(int, float)
+{
+    return std::make_unique<runner>();
+}
+
 /// <summary>
 ///  Demonstrate that it's possible to override the registration of 'runner' derived class.
 /// </summary>
@@ -94,21 +104,8 @@ template<>
 void register_constructors<runner>(shoe_factory& factory,
                                    const shoe_factory::key_type& key)
 {
-   factory.register_function<base_constructor>(
-      key,
-      []()
-      {
-         return std::make_unique<runner>();
-      }
-   );
-
-   factory.register_function<numerics_constructor>(
-      key,
-      [&factory, &key](int, float)
-      {
-         return factory.construct<base_constructor>(key);
-      }
-   );
+   factory.register_function<base_constructor>(key, make_runner_base);
+   factory.register_function<numerics_constructor>(key, make_runner_numeric);
 }
 
 /// <summary>

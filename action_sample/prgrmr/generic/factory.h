@@ -11,9 +11,6 @@
 namespace prgrmr::generic
 {
 
-template<typename function_t, typename... functions_t>
-concept is_all_same = (... && std::is_same<function_t, functions_t>::value);
-
 template<class function_t>
 std::decay_t<function_t> build_functions_type(function_t&& function)
 {
@@ -25,12 +22,6 @@ std::tuple<std::decay_t<functions_t>...> build_functions_type(functions_t&&... f
 {
    return std::make_tuple(build_functions_type<functions_t>(std::forward<functions_t>(functions))...);
 }
-
-template<typename... functions_t>
-concept do_functions_return_same_type =
-  std::conjunction_v<std::is_same<typename std::invoke_result<functions_t>::type,
-                                  typename std::invoke_result<functions_t, functions_t>::type>...>;
-
 
 ///
 /// <summary>
@@ -47,7 +38,10 @@ template<class... functions_t>
 class delegate_functions final
 {
 public:
-   using functions_type = std::tuple<functions_t...>;
+   using functions_type = std::tuple<std::decay<functions_t>...>;
+
+   template<typename function_t>
+   using stored_type = std::decay_t<function_t>;
 
    static_assert(concepts::arguments::IsNotEmpty<functions_t...>, "The argument list cannot be empty.");
 
@@ -69,13 +63,13 @@ public:
    template<class function_t>
    delegate_functions(function_t&& function)
    {
-      std::get<function_t>(_functions) = std::move(function);
+      std::get<stored_type<function_t>>(_functions) = std::forward(function);
    }
 
    template<class function_t, class... functions_t>
    delegate_functions(function_t&& function, functions_t&&... functions)
    {
-      std::get<function_t>(_functions) = std::move(function);
+      std::get<stored_type<function_t>>(_functions) = std::forward(function);
       delegate_functions<function_t>(functions...);
    }
 
@@ -173,7 +167,7 @@ public:
    template<class function_t>
    decltype(auto) get_function() const
    {
-      return std::get<function_t>(_functions);
+      return std::get<stored_type<function_t>>(_functions);
    }
 
    ///
@@ -201,7 +195,7 @@ public:
    template<class function_t>
    void register_function(function_t&& function)
    {
-      std::get<function_t>(_functions) = std::move(function);
+      std::get<stored_type<function_t>>(_functions) = std::forward(function);
    }
 
    ///
@@ -214,7 +208,7 @@ public:
    template<class function_t>
    void register_fn(const std::function<function_t>& function)
    {
-      std::get<function_t>(_functions) = function.target<function_t*>();
+      std::get<stored_type<function_t>>(_functions) = function;
    }
 
    ///
@@ -229,7 +223,7 @@ public:
    template<int index_t, class function_t>
    void register_function(function_t&& function)
    {
-      std::get<index_t>(_functions) = std::move(function);
+      std::get<index_t>(_functions) = std::forward(function);
    }
 
    ///
@@ -240,7 +234,7 @@ public:
    template<class function_t>
    void unregister_function()
    {
-      std::get<function_t>(_functions) = nullptr;
+      std::get<stored_type<function_t>>(_functions) = nullptr;
    }
 
    ///
@@ -300,10 +294,6 @@ private:
    functions_type _functions;
 };
 
-// how to ensure that all variadic functions are unique?
-// how to ensure that all variadic functions are unique?
-
-
 ///
 /// <summary>
 ///   The key_delegates_functions class allows to register a collection of delegate functions.
@@ -316,7 +306,7 @@ class key_delegates_functions final
 {
 public:
    typedef key_t key_type;
-   using function_types = std::tuple<functions_t...>;
+   using function_types = std::tuple<std::decay_t<functions_t>...>;
    typedef delegate_functions<functions_t...> delegate_type;
    typedef std::unordered_map<key_type, delegate_type> delegates_type;
 
@@ -493,8 +483,8 @@ public:
       const auto& iter = _delegates.find(key);
 
       return (iter != std::end(_delegates))
-             ? iter->second.get_function<function_t>()
-             : decltype(iter->second.get_function<function_t>())(nullptr);
+           ? iter->second.get_function<function_t>()
+           : decltype(iter->second.get_function<function_t>())(nullptr);
    }
 
    ///
@@ -510,8 +500,8 @@ public:
       const auto& iter = _delegates.find(key);
 
       return (iter != std::end(_delegates))
-             ? iter->second.get_function<index_t>()
-             : decltype(iter->second.get_function<index_t>())(nullptr);
+           ? iter->second.get_function<index_t>()
+           : decltype(iter->second.get_function<index_t>())(nullptr);
    }
 
    ///
@@ -530,7 +520,7 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return at(key).invoke<function_t>(std::move(args));
+      return at(key).invoke<function_t>(std::forward<args_t>(args)...);
    }
 
    ///
@@ -549,7 +539,7 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return at(key).invoke<index_t>(std::move(args));
+      return at(key).invoke<index_t>(std::forward<args_t>(args)...);
    }
 
    ///
@@ -642,7 +632,7 @@ class key_class_factory final
 {
 public:
    typedef key_t key_type;
-   using function_types = std::tuple<functions_t...>;
+   using function_types = std::tuple<std::decay<functions_t>...>;
    typedef key_delegates_functions<key_type, functions_t...> key_delegates_type;
    typedef typename key_delegates_type::delegate_type delegate_type;
 
@@ -835,8 +825,8 @@ public:
       const auto& function = _delegates.get_function<function_t>(key);
 
       return (function)
-             ? function(std::forward<args_t>(args)...)
-             : nullptr;
+           ? function(std::forward<args_t>(args)...)
+           : nullptr;
    }
 
    ///
@@ -856,8 +846,8 @@ public:
       const auto& function = _delegates.get_function<index_t>(key);
 
       return (function)
-             ? function(std::forward<args_t>(args)...)
-             : decltype(function(std::forward<args_t>(args)...))(nullptr);
+           ? function(std::forward<args_t>(args)...)
+           : decltype(function(std::forward<args_t>(args)...))(nullptr);
    }
 
    ///
