@@ -828,21 +828,7 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-      using result_type = traits::invocable::invocable_result_t<function_t>;
-
-      const auto function = get_function<function_t>(key);
-
-      if (function)
-      {
-        return function(std::forward<args_t>(args)...);
-      }
-
-      if constexpr (std::is_pointer_v<result_type> || std::is_same_v<result_type, std::nullptr_t>)
-      {
-        return result_type{nullptr};
-      }
-
-      return result_type{};
+      return construct(get_function<function_t>(key), std::forward<args_t>(args)...);
    }
 
    ///
@@ -859,22 +845,7 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-     using stored_fn_t = std::tuple_element_t<index_t, function_types>;
-     using result_type = traits::invocable::invocable_result_t<stored_fn_t>;
-
-     const auto function = get_function<index_t>(key);
-
-     if (function)
-     {
-         return function(std::forward<args_t>(args)...);
-     }
-
-     if constexpr (std::is_pointer_v<result_type> || std::is_same_v<result_type, std::nullptr_t>)
-     {
-         return result_type{ nullptr };
-     }
-
-     return result_type{};
+     return construct(get_function<index_t>(key), std::forward<args_t>(args)...);
    }
 
    ///
@@ -891,5 +862,33 @@ public:
 
 private:
    key_delegates_type _delegates;
+
+   ///
+   /// <summary>
+   ///   Constructs an instance of the class.
+   /// </summary>
+   ///
+   /// <see cref="key_delegates_functions::invoke"/>
+   ///
+   /// <returns>An instance of the class.<returns>
+   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   ///
+   template<class function_t, class... args_t>
+   auto construct(function_t function, args_t&&... args) const
+   {
+       using result_type = traits::invocable::invocable_result_t<function_t>;
+
+       if (function)
+       {
+           return function(std::forward<args_t>(args)...);
+       }
+
+       if constexpr (std::is_pointer_v<result_type> || std::is_same_v<result_type, std::nullptr_t>)
+       {
+           return result_type{ nullptr };
+       }
+
+       return result_type{};
+   }
 };
 }
