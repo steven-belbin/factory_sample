@@ -58,7 +58,7 @@ void register_constructors(shoe_factory& factory,
         if constexpr (!std::constructible_from<T, int, float>)
         {
             auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
-                { return factory.construct<base_constructor>(key); };
+                 { return factory.construct<base_constructor>(key); };
 
             factory.register_function<numerics_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
@@ -73,7 +73,7 @@ void register_constructors(shoe_factory& factory,
         if constexpr (!std::default_initializable<T>)
         {
             auto fun = [&factory, key]()
-                { return factory.construct<numerics_constructor>(key, 0, 0.0f); };
+                 { return factory.construct<numerics_constructor>(key, 0, 0.0f); };
 
             factory.register_function<base_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
@@ -104,8 +104,19 @@ template<>
 void register_constructors<runner>(shoe_factory& factory,
                                    const shoe_factory::key_type& key)
 {
-   factory.register_function<base_constructor>(key, make_runner_base);
-   factory.register_function<numerics_constructor>(key, make_runner_numeric);
+   std::cout << "============================================================================================\n";
+   std::cout << "                         Registering " << key << " constructors.\n";
+   std::cout << "============================================================================================\n";
+
+   factory.register_functions
+   (
+     key,
+     std::make_tuple
+     (
+       base_constructor{ make_runner_base },
+       numerics_constructor{ make_runner_numeric }
+     )
+   );
 }
 
 /// <summary>
