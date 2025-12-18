@@ -34,12 +34,12 @@ public:
    static_assert(concepts::invocable::IsDifferentSignatures<functions_t...>,
                  "The argument list contains at least one pair of functions having the same signature.");
 
-   using functions_type = std::tuple<std::decay_t<functions_t>...>;
+   using functions_type = traits::invocable::invocables_t<functions_t...>;
 
    template<typename function_t>
    using stored_type = std::decay_t<function_t>;
 
-   using result_type = traits::invocable::invocable_result_t<stored_type<std::tuple_element_t<0, functions_type>>>;
+   using result_type = traits::invocable::invocables_result_t<functions_t...>;
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
@@ -578,23 +578,25 @@ private:
 
 ///
 /// <summary>
-///   Constructs an instance using the given function.
+///   Invokes a function with the given arguments when the function is defined,
+///  otherwise returns the given default value.
 /// </summary>
 ///
-/// <see cref="key_delegates_functions::invoke"/>
-///
-/// <returns>A constructed instance.<returns>
-/// <returns>nullptr when function is empty.<returns>
+/// <param name="function">The function to be invoked.</param>
+/// <param name="args">The arguments to pass to the function.</param>
+/// <param name="default_value">The default value to return when the function is empty.</param>
 ///
 template<class function_t, class... args_t>
-auto construct_using_function(function_t function, args_t&&... args)
+auto invoke_value_or(function_t function,
+                     const std::tuple<args_t...>& args,
+                     traits::invocable::invocables_result_t<function_t> default_value)
 {
    if (function)
    {
-     return function(std::forward<args_t>(args)...);
+     return std::apply(function, args);
    }
 
-   return traits::invocable::invocable_result_t<function_t>{ nullptr };
+   return default_value;
 }
 
 ///
@@ -843,7 +845,9 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-      return construct_using_function(get_function<function_t>(key), std::forward<args_t>(args)...);
+      return invoke_value_or(get_function<function_t>(key),
+                             std::forward_as_tuple(std::forward<args_t>(args)...),
+                             nullptr);
    }
 
    ///
@@ -860,7 +864,9 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-     return construct_using_function(get_function<index_t>(key), std::forward<args_t>(args)...);
+     return invoke_value_or(get_function<index_t>(key),
+                            std::forward_as_tuple(std::forward<args_t>(args)...),
+                            nullptr);
    }
 
    ///

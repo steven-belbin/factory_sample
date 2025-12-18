@@ -83,6 +83,18 @@ template<typename Invocable>
 using invocable_signature_t = typename invocable<std::decay_t<Invocable>>::signature_type;
 
 ///
+/// Get a set of invocables'.
+///
+template<typename ... Invocables>
+using invocables_t = std::tuple<std::decay_t<Invocables>...>;
+
+///
+/// Get a set of invocables' result type.
+///
+template<typename ... Invocables>
+using invocables_result_t = invocable_result_t<std::tuple_element_t<0, invocables_t<Invocables...>>>;
+
+///
 /// Evaluate if a list invocables have the same result type.
 ///
 template<typename ...>
