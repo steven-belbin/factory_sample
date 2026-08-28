@@ -55,7 +55,7 @@ public:
    ///   Constructs an instance and registers all possible functions.
    /// </summary>
    ///
-   //// <param name="functions">A container of all possible functions.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
    explicit delegate_functions(const functions_type& functions)
    : _functions{ functions }
@@ -67,7 +67,7 @@ public:
    ///   Constructs an instance and registers all possible functions.
    /// </summary>
    ///
-   //// <param name="functions">A container of all possible functions.</param>
+   /// <param name="functions">A container of all possible functions.</param>
    ///
    explicit delegate_functions(functions_type&& functions)
    : _functions{ std::forward<functions_type>(functions) }
@@ -115,7 +115,7 @@ public:
    ///
    /// <returns>A reference to the registered function.</returns>
    ///
-   /// <remarks>When no function has been registered, then reference will be a function(nullptr).</remarks>
+   /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
    ///
    template<class function_t>
    decltype(auto) get_function() const
@@ -130,7 +130,7 @@ public:
    ///
    /// <returns>A reference to the registered function.</returns>
    ///
-   /// <remarks>When no function has been registered, then reference will be a function(nullptr).</remarks>
+   /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
    ///
    template<int index_t>
    decltype(auto) get_function() const
@@ -864,9 +864,9 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-     return invoke_value_or(get_function<index_t>(key),
-                            std::forward_as_tuple(std::forward<args_t>(args)...),
-                            nullptr);
+      return invoke_value_or(get_function<index_t>(key),
+                             std::forward_as_tuple(std::forward<args_t>(args)...),
+                             nullptr);
    }
 
    ///
