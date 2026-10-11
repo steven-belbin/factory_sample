@@ -18,13 +18,13 @@ template<typename ... Arguments>
 concept IsEmpty = traits::arguments::is_empty<Arguments...>;
 
 ///
-/// Concept to check for when there aren't any arguments.
+/// Concept to check for when there is at least one argument.
 ///
 template<typename ... Arguments>
 concept IsNotEmpty = traits::arguments::is_not_empty<Arguments...>;
 
 ///
-/// Concept to check for when there aren't any arguments.
+/// Concept to check that the number of template arguments is at least the count.
 ///
 template<std::size_t Count, typename ... Arguments>
 concept IsAtLeast = traits::arguments::is_at_least<Count, Arguments...>;
