@@ -218,6 +218,23 @@ public:
 
    ///
    /// <summary>
+   ///   Invokes the function that matches the provided argument types.
+   /// </summary>
+   ///
+   template<class... args_t>
+   decltype(auto) invoke(args_t&&... args)
+   {
+       static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
+           "Ambiguous call or no matching function found for the provided arguments.");
+
+       using function_t =
+           concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+
+       return invoke<function_t>(std::forward<args_t>(args)...);
+   }
+
+   ///
+   /// <summary>
    ///   Invoke a specific function by its tuple index.
    /// </summary>
    ///
@@ -229,21 +246,6 @@ public:
    decltype(auto) invoke(args_t&&... args)
    {
       return get_function<index_t>()(std::forward<args_t>(args)...);
-   }
-
-   /// <summary>
-   ///   Invokes the function that matches the provided argument types.
-   /// </summary>
-   template<class... args_t>
-   decltype(auto) invoke(args_t&&... args)
-   {
-      static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
-                    "Ambiguous call or no matching function found for the provided arguments.");
-
-      constexpr std::size_t index = 
-         concepts::invocable::detail::find_invocable_index<functions_t...>(static_cast<std::tuple<args_t...>*>(nullptr));
-
-      return std::get<index>(_functions)(std::forward<args_t>(args)...);
    }
 
    ///
@@ -858,11 +860,29 @@ public:
    ///
    template<class function_t, class... args_t>
    auto construct(const key_type& key,
-                         args_t&&... args) const
+                  args_t&&... args) const
    {
       return invoke_value_or(get_function<function_t>(key),
                              std::forward_as_tuple(std::forward<args_t>(args)...),
                              nullptr);
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes the function that matches the provided argument types.
+   /// </summary>
+   ///
+   template<class... args_t>
+   auto construct(const key_type& key,
+                  args_t&&... args) const
+   {
+       static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
+                     "Ambiguous call or no matching function found for the provided arguments.");
+
+       using function_t =
+           concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+
+       return construct<function_t>(key, std::forward<args_t>(args)...);
    }
 
    ///
@@ -877,7 +897,7 @@ public:
    ///
    template<int index_t, class... args_t>
    auto construct(const key_type& key,
-                         args_t&&... args) const
+                  args_t&&... args) const
    {
       return invoke_value_or(get_function<index_t>(key),
                              std::forward_as_tuple(std::forward<args_t>(args)...),

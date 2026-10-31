@@ -18,13 +18,22 @@ void run_shoe_tests(std::unique_ptr<nike::shoe> shoe_ptr)
 void test_constructors(const nike::shoe_factory& factory,
                        const nike::shoe_factory::key_type& key)
 {
-   std::cout << "----------  Constructing using signatures.  -------------\n";
+   std::cout << "----------  Constructing using templated signatures.  -------------\n";
 
    std::cout << "Base signature.\n";
    run_shoe_tests(factory.construct<nike::base_constructor>(key));
 
    std::cout << "\nConstruct using numerics signature.\n";
    run_shoe_tests(factory.construct<nike::numerics_constructor>(key, 5, 5.0f));
+
+   std::cout << "----------  Constructing using implicit signatures.  -------------\n";
+
+   std::cout << "Base signature.\n";
+   run_shoe_tests(factory.construct(key));
+
+   std::cout << "\nConstruct using numerics signature.\n";
+   run_shoe_tests(factory.construct(key, 5, 5.0f));
+
 
    std::cout << "\n----------  Constructing using tuples.  --------------\n";
 

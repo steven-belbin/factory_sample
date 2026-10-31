@@ -90,7 +90,24 @@ namespace prgrmr::concepts::invocable
 
             return total;
         }
+
+        template<typename ArgsTuple, typename... Invocables>
+        struct find_invocable;
+
+        template<typename... Args, typename... Invocables>
+        struct find_invocable<std::tuple<Args...>, Invocables...>
+        {
+            using type = std::tuple_element_t<
+                find_invocable_index<Invocables...>(static_cast<std::tuple<Args...>*>(nullptr)),
+                std::tuple<Invocables...>>;
+        };
     }
+
+    ///
+    /// Deduce the invocable type from a pack that matches the given argument types tuple.
+    ///
+    template<typename ArgsTuple, typename... Invocables>
+    using find_invocable_t = typename detail::find_invocable<ArgsTuple, Invocables...>::type;
 
     ///
     /// Deduce return type of an invocable.
