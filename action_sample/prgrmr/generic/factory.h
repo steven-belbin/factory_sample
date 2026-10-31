@@ -34,12 +34,12 @@ public:
    static_assert(concepts::invocable::IsDifferentSignatures<functions_t...>,
                  "The argument list contains at least one pair of functions having the same signature.");
 
-   using functions_type = traits::invocable::invocables_t<functions_t...>;
+   using functions_type = concepts::invocable::invocables_tuple_t<functions_t...>;
 
    template<typename function_t>
    using stored_type = std::decay_t<function_t>;
 
-   using result_type = traits::invocable::invocables_result_t<functions_t...>;
+   using result_type = concepts::invocable::invocables_result_t<functions_t...>;
 
    delegate_functions() = default;
    delegate_functions(const delegate_functions&) = default;
@@ -176,7 +176,7 @@ public:
    template<int index_t, class function_t>
    void register_function(function_t&& function)
    {
-      std::get<index_t>(_functions) = std::forward(function);
+      std::get<index_t>(_functions) = std::forward<function_t>(function);
    }
 
    ///
@@ -589,7 +589,7 @@ private:
 template<class function_t, class... args_t>
 auto invoke_value_or(function_t function,
                      const std::tuple<args_t...>& args,
-                     traits::invocable::invocables_result_t<function_t> default_value)
+                     concepts::invocable::invocables_result_t<function_t> default_value)
 {
    if (function)
    {

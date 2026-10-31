@@ -1,6 +1,8 @@
 #pragma once
 
 #include <concepts>
+#include <functional>
+#include <tuple>
 #include <type_traits>
 
 namespace prgrmr::concepts::invocable
@@ -11,39 +13,43 @@ namespace prgrmr::concepts::invocable
         template<typename Function>
         struct function_traits;
 
+        // Function type
         template<typename Return, typename... Parameters>
-        struct function_traits<Return (Parameters...)>
+        struct function_traits<Return(Parameters...)>
         {
             using return_type = Return;
-
-            template<typename U>
-            struct rebind_args;
-
-            template<typename... NewParameters>
-            struct rebind_args<Return (NewParameters...)>
-            {
-              using type = Return(NewParameters...);
-            };
+            using signature_type = Return(Parameters...);
         };
 
+        // Function pointer
         template<typename Return, typename... Parameters>
-        struct function_traits<Return (*)(Parameters...)> : function_traits<Return (Parameters...)> {};
+        struct function_traits<Return(*)(Parameters...)> : function_traits<Return(Parameters...)> {};
 
+        // std::function
+        template<typename Return, typename... Parameters>
+        struct function_traits<std::function<Return(Parameters...)>> : function_traits<Return(Parameters...)> {};
+
+        // Member function pointer (non-const)
         template<typename Class, typename Return, typename... Parameters>
-        struct function_traits<Return (Class::*)(Parameters...)> : function_traits<Return (Parameters...)> {};
+        struct function_traits<Return(Class::*)(Parameters...)> : function_traits<Return(Parameters...)> {};
 
+        // Member function pointer (const)
         template<typename Class, typename Return, typename... Parameters>
-        struct function_traits<Return (Class::*)(Parameters...) const> : function_traits<Return (Parameters...)> {};
+        struct function_traits<Return(Class::*)(Parameters...) const> : function_traits<Return(Parameters...)> {};
 
+        // Functor / lambda: forward to operator()
         template<typename T>
-        requires requires(T t) { &T::operator(); }
-        struct function_traits<T> : function_traits<decltype(&T::operator())> {};
+        requires requires { &std::remove_reference_t<T>::operator(); }
+        struct function_traits<T> : function_traits<decltype(&std::remove_reference_t<T>::operator())> {};
 
         template<typename Function>
         using invoke_return_t = typename function_traits<std::decay_t<Function>>::return_type;
 
+        template<typename Function>
+        using invoke_signature_t = typename function_traits<std::decay_t<Function>>::signature_type;
+
         ///
-        /// Checks that all signatures within in a pack are unique.
+        /// Checks that all signatures within a pack are unique.
         ///
         template<typename... Signatures>
         consteval bool are_unique_signatures()
@@ -64,32 +70,52 @@ namespace prgrmr::concepts::invocable
                     {
                         return are_unique_signatures<Rest...>();
                     }
-                }(std::type_identity<Signatures>{}_{...});
+                }(std::type_identity<Signatures>{}...);
             }
         }
     }
 
     ///
-    /// Concept to enforce that a list of invocables have the same result type.
+    /// Deduce return type of an invocable.
     ///
-    template<typename ... Invocables>
-    concept IsSameResultType = (sizeof...(Invocables) <= 1) || []<typename Functionirst, typename... Rest>(std::type_identity<First>, std::type_identity<Rest>...)
-    {
-        return (std::is_same_v<detail::invoke_return_t<First>, detail::invoke_return_t<Rest>> && ...);
-    }(std::type_identity<Invocables>{}_{...});
+    template<typename Function>
+    using invocable_return_t = detail::invoke_return_t<Function>;
 
     ///
-    /// Concept to enforce that all invocables within the pack have the same return type.
+    /// Deduce canonical signature type of an invocable: Return(Parameters...)
     ///
-    template<typename ... Invocables>
-    concept IsSameReturn = (sizeof...(Invocables) <= 1) || []<typename Functionirst, typename... Rest>(std::type_identity<First>, std::type_identity<Rest>...)
-    {
-        return (std::is_same_v<detail::invoke_return_t<First>, detail::invoke_return_t<Rest>> && ...);
-    }(std::type_identity<Invocables>{}_{...});
+    template<typename Function>
+    using invocable_signature_t = detail::invoke_signature_t<Function>;
 
     ///
-    /// Concept to enforce that a list of invocables have unique signatures (parameter types + return type).
+    /// Tuple of decayed invocable types.
     ///
-    template<typename ... Invocables>
-    concept IsDifferentSignatures = detail::are_unique_signatures<std::decay_t<Invocables>...>();
+    template<typename... Invocables>
+    using invocables_tuple_t = std::tuple<std::decay_t<Invocables>...>;
+
+    ///
+    /// Common result type of the invocables pack (taken from the first).
+    ///
+    template<typename... Invocables>
+    requires (sizeof...(Invocables) > 0)
+    using invocables_result_t = invocable_return_t<std::tuple_element_t<0, std::tuple<Invocables...>>>;
+
+    ///
+    /// Concept to enforce that all invocables in the pack return the same type.
+    ///
+    template<typename... Invocables>
+    concept IsSameResultType = (sizeof...(Invocables) <= 1) ||
+        []<typename First, typename... Rest>(std::type_identity<First>, std::type_identity<Rest>...)
+        {
+            return (std::is_same_v<detail::invoke_return_t<First>, detail::invoke_return_t<Rest>> && ...);
+        }(std::type_identity<Invocables>{}...);
+
+    template<typename... Invocables>
+    concept IsSameReturn = IsSameResultType<Invocables...>;
+
+    ///
+    /// Concept to enforce that all invocables have distinct canonical signatures (parameters + return).
+    ///
+    template<typename... Invocables>
+    concept IsDifferentSignatures = detail::are_unique_signatures<detail::invoke_signature_t<Invocables>...>();
 }
