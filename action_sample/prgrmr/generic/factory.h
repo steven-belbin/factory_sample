@@ -827,7 +827,7 @@ public:
    ///
    template<int index_t>
    decltype(auto) get_function(const key_type& key) const
-   {
+      {
       return _delegates.get_function<index_t>(key);
    }
 
@@ -843,7 +843,7 @@ public:
    ///
    template<class function_t, class... args_t>
    auto construct(const key_type& key,
-                  args_t&&... args) const
+                         args_t&&... args) const
    {
       return invoke_value_or(get_function<function_t>(key),
                              std::forward_as_tuple(std::forward<args_t>(args)...),
@@ -862,7 +862,7 @@ public:
    ///
    template<int index_t, class... args_t>
    auto construct(const key_type& key,
-                  args_t&&... args) const
+                         args_t&&... args) const
    {
       return invoke_value_or(get_function<index_t>(key),
                              std::forward_as_tuple(std::forward<args_t>(args)...),

@@ -11,7 +11,7 @@ namespace nike
 using base_constructor     = std::function<std::unique_ptr<shoe> ()>;
 using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
 
-#region "Factory Documentation"
+/// #region "Factory Documentation"
 /// <summary>
 /// This factory can construct a `nike::shoe` abstract base class instance on
 /// behalf of applications.
@@ -47,7 +47,7 @@ using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
 ///   specific behaviors when invoking the class instance methods.
 /// </remarks>
 /// 
-#endregion
+/// #endregion
 
 using shoe_factory =
       prgrmr::generic::key_class_factory<std::string,

@@ -10,7 +10,7 @@
 
 namespace nike
 {
-#region "Factory Configuration Documentation"
+/// #region "Factory Configuration Documentation"
 /// <summary>
 /// Automatically registers the given class <T> constructors into the
 /// class factory for the given key.
@@ -44,7 +44,7 @@ namespace nike
 /// reduce boilerplate code when registering classes with many constructors.
 /// </todo>
 /// 
-#endregion
+/// #endregion
 template<class T>
 void register_constructors(shoe_factory& factory,
                            const shoe_factory::key_type& key)
@@ -94,7 +94,7 @@ inline std::unique_ptr<shoe> make_runner_numeric(int, float)
     return std::make_unique<runner>();
 }
 
-#region "Specialization for runner class"
+/// #region "Specialization for runner class"
 /// <summary>
 ///  Demonstrate that it's possible to override the registration of 'runner' derived class.
 /// </summary>
@@ -105,7 +105,7 @@ inline std::unique_ptr<shoe> make_runner_numeric(int, float)
 ///  factory's base constructor for this key.
 /// </remarks>
 ///
-#endregion
+/// #endregion
 template<>
 void register_constructors<runner>(shoe_factory& factory,
                                    const shoe_factory::key_type& key)
