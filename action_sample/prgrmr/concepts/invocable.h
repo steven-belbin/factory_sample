@@ -73,6 +73,23 @@ namespace prgrmr::concepts::invocable
                 }(std::type_identity<Signatures>{}...);
             }
         }
+
+        template<typename... Invocables, typename... Args>
+        consteval std::size_t find_invocable_index(std::tuple<Args...>* = nullptr)
+        {
+            constexpr bool matches[] = { std::is_invocable_v<Invocables, Args...>... };
+            constexpr std::size_t total = sizeof...(Invocables);
+
+            for (std::size_t i = 0; i < total; ++i)
+            {
+                if (matches[i])
+                {
+                    return i;
+                }
+            }
+
+            return total;
+        }
     }
 
     ///
@@ -118,4 +135,17 @@ namespace prgrmr::concepts::invocable
     ///
     template<typename... Invocables>
     concept IsDifferentSignatures = detail::are_unique_signatures<detail::invoke_signature_t<Invocables>...>();
+
+    ///
+    /// Concept to enforce that exactly one invocable matches the given argument types.
+    ///
+    template<typename ArgsTuple, typename... Invocables>
+    struct is_unique_invocable : std::false_type {};
+
+    template<typename... Args, typename... Invocables>
+    struct is_unique_invocable<std::tuple<Args...>, Invocables...>
+        : std::bool_constant<((std::is_invocable_v<Invocables, Args...> ? 1 : 0) + ...) == 1> {};
+
+    template<typename ArgsTuple, typename... Invocables>
+    concept IsUniqueInvocable = is_unique_invocable<ArgsTuple, Invocables...>::value;
 }

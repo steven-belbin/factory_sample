@@ -231,6 +231,21 @@ public:
       return get_function<index_t>()(std::forward<args_t>(args)...);
    }
 
+   /// <summary>
+   ///   Invokes the function that matches the provided argument types.
+   /// </summary>
+   template<class... args_t>
+   decltype(auto) invoke(args_t&&... args)
+   {
+      static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
+                    "Ambiguous call or no matching function found for the provided arguments.");
+
+      constexpr std::size_t index = 
+         concepts::invocable::detail::find_invocable_index<functions_t...>(static_cast<std::tuple<args_t...>*>(nullptr));
+
+      return std::get<index>(_functions)(std::forward<args_t>(args)...);
+   }
+
    ///
    /// <summary>
    ///   Swaps the contents with another reference.
