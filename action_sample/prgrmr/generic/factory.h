@@ -385,7 +385,7 @@ public:
    {
       if (const auto delegate = get_delegate(key); delegate != nullptr)
       {
-          delegate->unregister_function<function_t>();
+          delegate->template unregister_function<function_t>();
       }
    }
 
@@ -401,7 +401,7 @@ public:
    {
        if (const auto delegate = get_delegate(key); delegate != nullptr)
        {
-           delegate->unregister_function<index_t>();
+           delegate->template unregister_function<index_t>();
        }
    }
 
@@ -451,10 +451,10 @@ public:
    {
       if (const auto delegate = get_delegate(key); delegate != nullptr)
       {
-         return delegate->get_function<function_t>();
+         return delegate->template get_function<function_t>();
       }
 
-      using function_type = std::decay_t<decltype(std::declval<delegate_type>().get_function<function_t>())>;
+      using function_type = std::decay_t<decltype(std::declval<delegate_type>().template get_function<function_t>())>;
 
       return function_type{};
    }
@@ -471,10 +471,10 @@ public:
    {
       if (const auto delegate = get_delegate(key); delegate != nullptr)
       {
-         return delegate->get_function<index_t>();
+         return delegate->template get_function<index_t>();
       }
 
-      using function_type = std::decay_t<decltype(std::declval<delegate_type>().get_function<index_t>())>;
+      using function_type = std::decay_t<decltype(std::declval<delegate_type>().template get_function<index_t>())>;
 
       return function_type{};
    }
@@ -495,7 +495,7 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return at(key).invoke<function_t>(std::forward<args_t>(args)...);
+      return at(key).template invoke<function_t>(std::forward<args_t>(args)...);
    }
 
    ///
@@ -514,7 +514,7 @@ public:
    decltype(auto) invoke(const key_type& key,
                          args_t&&... args) const
    {
-      return at(key).invoke<index_t>(std::forward<args_t>(args)...);
+      return at(key).template invoke<index_t>(std::forward<args_t>(args)...);
    }
 
    ///
@@ -804,7 +804,7 @@ public:
    template<class function_t>
    void unregister_function(const key_type& key)
    {
-      _delegates.unregister_function<function_t>(key);
+      _delegates.template unregister_function<function_t>(key);
    }
 
    ///
@@ -817,7 +817,7 @@ public:
    template<int index_t>
    void unregister_function(const key_type& key)
    {
-      _delegates.unregister_function<index_t>(key);
+      _delegates.template unregister_function<index_t>(key);
    }
 
    ///
@@ -831,7 +831,7 @@ public:
    template<class function_t>
    decltype(auto) get_function(const key_type& key) const
    {
-      return _delegates.get_function<function_t>(key);
+      return _delegates.template get_function<function_t>(key);
    }
 
    ///
@@ -845,7 +845,7 @@ public:
    template<int index_t>
    decltype(auto) get_function(const key_type& key) const
       {
-      return _delegates.get_function<index_t>(key);
+      return _delegates.template get_function<index_t>(key);
    }
 
    ///

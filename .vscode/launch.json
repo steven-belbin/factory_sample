@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug test_nike_shoe_factory (clang)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/clang-debug/test_nike_shoe_factory.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build (clang debug)"
+    },
+    {
+      "name": "Debug delegate_static_assertions (clang)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/clang-debug/delegate_static_assertions.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build (clang debug)"
+    }
+  ]
+}
