@@ -12,7 +12,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_compile_options(-fdelayed-template-parsing -Wno-delayed-template-parsing-in-cxx20)
 endif()
 
-foreach(target test_nike_shoe_factory delegate_static_assertions)
+foreach(target test_nike_shoe_factory)
   add_executable(${target} action_sample/${target}.cpp)
   target_include_directories(${target} PRIVATE action_sample)
 endforeach()

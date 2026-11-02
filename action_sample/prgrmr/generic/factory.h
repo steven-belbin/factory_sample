@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../concepts/arguments.h"
-#include "../concepts/concepts.h"
+#include "../concepts/invocable.h"
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -10,6 +10,29 @@
 
 namespace prgrmr::generic
 {
+
+///
+/// <summary>
+///   Invokes a function with the given arguments when the function is defined,
+///  otherwise returns the given default value.
+/// </summary>
+///
+/// <param name="function">The function to be invoked.</param>
+/// <param name="args">The arguments to pass to the function.</param>
+/// <param name="value">The value to return when the function is empty.</param>
+///
+template<class function_t, class... args_t>
+auto invoke_or_value(function_t function,
+                     const std::tuple<args_t...>& args,
+                     concepts::invocable::invocables_result_t<function_t> value = {})
+{
+   if (function)
+   {
+     return std::apply(function, args);
+   }
+
+   return value;
+}
 
 ///
 /// <summary>
@@ -225,13 +248,13 @@ public:
    decltype(auto) invoke(args_t&&... args)
    {
        static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
-           "Ambiguous call or no matching function found for the provided arguments.");
+                     "Ambiguous call or no matching function found for the provided arguments.");
 
        using function_t =
            concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
 
        return invoke<function_t>(std::forward<args_t>(args)...);
-   }
+   } 
 
    ///
    /// <summary>
@@ -246,6 +269,58 @@ public:
    decltype(auto) invoke(args_t&&... args)
    {
       return get_function<index_t>()(std::forward<args_t>(args)...);
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes a specific function by its signature when registered,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="args">The arguments to pass to the function.</param>
+   ///
+   template<class function_t, class... args_t>
+   auto invoke_or_default(args_t&&... args) const
+   {
+      return invoke_or_value(get_function<function_t>(),
+                             std::forward_as_tuple(std::forward<args_t>(args)...),
+                             result_type{});
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes the function that matches the provided argument types when registered,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="args">The arguments to pass to the function.</param>
+   ///
+   template<class... args_t>
+   auto invoke_or_default(args_t&&... args) const
+   {
+       static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
+                     "Ambiguous call or no matching function found for the provided arguments.");
+
+       using function_t =
+           concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+
+       return invoke_or_default<function_t>(std::forward<args_t>(args)...);
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes a specific function by its tuple index when registered,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="args">The arguments to pass to the function.</param>
+   ///
+   template<int index_t, class... args_t>
+   auto invoke_or_default(args_t&&... args) const
+   {
+      return invoke_or_value(get_function<index_t>(),
+                             std::forward_as_tuple(std::forward<args_t>(args)...),
+                             result_type{});
    }
 
    ///
@@ -519,6 +594,76 @@ public:
 
    ///
    /// <summary>
+   ///   Invokes a specific function by its signature registered under the given key when available,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="args">The function arguments to pass to the function.</param>
+   ///
+   /// <seealso cref="delegate_functions::invoke_or_default" />
+   ///
+   template<class function_t, class... args_t>
+   auto invoke_or_default(const key_type& key,
+                          args_t&&... args) const
+   {
+      if (const auto delegate = get_delegate(key); delegate != nullptr)
+      {
+         return delegate->template invoke_or_default<function_t>(std::forward<args_t>(args)...);
+      }
+
+      return result_type{};
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes the function that matches the provided argument types registered under the given key when available,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="args">The function arguments to pass to the function.</param>
+   ///
+   /// <seealso cref="delegate_functions::invoke_or_default" />
+   ///
+   template<class... args_t>
+   auto invoke_or_default(const key_type& key,
+                          args_t&&... args) const
+   {
+       static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
+                     "Ambiguous call or no matching function found for the provided arguments.");
+
+       using function_t =
+           concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+
+       return invoke_or_default<function_t>(key, std::forward<args_t>(args)...);
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes a specific function by its tuple index registered under the given key when available,
+   ///   otherwise returns default-constructed result_type.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="args">The function arguments to pass to the function.</param>
+   ///
+   /// <seealso cref="delegate_functions::invoke_or_default" />
+   ///
+   template<int index_t, class... args_t>
+   auto invoke_or_default(const key_type& key,
+                          args_t&&... args) const
+   {
+      if (const auto delegate = get_delegate(key); delegate != nullptr)
+      {
+         return delegate->template invoke_or_default<index_t>(std::forward<args_t>(args)...);
+      }
+
+      return result_type{};
+   }
+
+   ///
+   /// <summary>
    ///   Swaps the contents with another reference.
    /// </summary>
    ///
@@ -592,29 +737,6 @@ public:
 private:
    delegates_type _delegates;
 };
-
-///
-/// <summary>
-///   Invokes a function with the given arguments when the function is defined,
-///  otherwise returns the given default value.
-/// </summary>
-///
-/// <param name="function">The function to be invoked.</param>
-/// <param name="args">The arguments to pass to the function.</param>
-/// <param name="default_value">The default value to return when the function is empty.</param>
-///
-template<class function_t, class... args_t>
-auto invoke_value_or(function_t function,
-                     const std::tuple<args_t...>& args,
-                     concepts::invocable::invocables_result_t<function_t> default_value)
-{
-   if (function)
-   {
-     return std::apply(function, args);
-   }
-
-   return default_value;
-}
 
 ///
 /// <summary>
@@ -844,7 +966,7 @@ public:
    ///
    template<int index_t>
    decltype(auto) get_function(const key_type& key) const
-      {
+   {
       return _delegates.template get_function<index_t>(key);
    }
 
@@ -862,9 +984,7 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-      return invoke_value_or(get_function<function_t>(key),
-                             std::forward_as_tuple(std::forward<args_t>(args)...),
-                             nullptr);
+      return _delegates.template invoke_or_default<function_t>(key, std::forward<args_t>(args)...);
    }
 
    ///
@@ -876,13 +996,7 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-       static_assert(concepts::invocable::IsUniqueInvocable<std::tuple<args_t...>, functions_t...>,
-                     "Ambiguous call or no matching function found for the provided arguments.");
-
-       using function_t =
-           concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
-
-       return construct<function_t>(key, std::forward<args_t>(args)...);
+      return _delegates.invoke_or_default(key, std::forward<args_t>(args)...);
    }
 
    ///
@@ -899,9 +1013,7 @@ public:
    auto construct(const key_type& key,
                   args_t&&... args) const
    {
-      return invoke_value_or(get_function<index_t>(key),
-                             std::forward_as_tuple(std::forward<args_t>(args)...),
-                             nullptr);
+      return _delegates.template invoke_or_default<index_t>(key, std::forward<args_t>(args)...);
    }
 
    ///
