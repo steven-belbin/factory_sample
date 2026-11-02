@@ -6,7 +6,7 @@ class shoe
 {
 public:
    shoe() = default;
-   virtual ~shoe() = 0 {};
+   virtual ~shoe() = default;
    virtual void do_it() = 0;
 
 private:
