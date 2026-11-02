@@ -7,7 +7,10 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/clang-debug/test_nike_shoe_factory.exe",
       "args": [],
+      "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
       "preLaunchTask": "build (clang debug)"
     },
     {
@@ -16,8 +19,12 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/clang-debug/delegate_static_assertions.exe",
       "args": [],
+      "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
       "preLaunchTask": "build (clang debug)"
     }
   ]
 }
+

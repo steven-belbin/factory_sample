@@ -1,5 +1,10 @@
 {
   "version": "2.0.0",
+  "options": {
+    "env": {
+      "PATH": "C:\\Program Files\\LLVM\\bin;C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin;C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja;${env:PATH}"
+    }
+  },
   "tasks": [
     {
       "label": "cmake configure (clang debug)",
@@ -11,9 +16,28 @@
       "label": "build (clang debug)",
       "type": "shell",
       "command": "cmake --build --preset clang-debug",
-      "dependsOn": "cmake configure (clang debug)",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "cmake configure (clang release)",
+      "type": "shell",
+      "command": "cmake --preset clang-release",
+      "problemMatcher": []
+    },
+    {
+      "label": "build (clang release)",
+      "type": "shell",
+      "command": "cmake --build --preset clang-release",
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "clean (clang debug)",
+      "type": "shell",
+      "command": "cmake --build --preset clang-debug --target clean",
+      "problemMatcher": []
     }
   ]
 }
+

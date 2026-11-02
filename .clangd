@@ -1,0 +1,5 @@
+CompileFlags:
+  CompilationDatabase: "build/clang-debug"
+  Add:
+    - "-fdelayed-template-parsing"
+    - "-Wno-delayed-template-parsing-in-cxx20"
