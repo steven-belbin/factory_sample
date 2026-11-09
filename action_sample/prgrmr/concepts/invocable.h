@@ -77,6 +77,11 @@ namespace prgrmr::concepts::invocable
         template<typename... Invocables, typename... Args>
         consteval std::size_t find_invocable_index(std::tuple<Args...>* = nullptr)
         {
+            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, Args...> ? 1 : 0) + ...);
+
+            static_assert(match_count > 0, "No matching function found for the provided arguments.");
+            static_assert(match_count <= 1, "Ambiguous call: multiple matching functions found for the provided arguments.");
+
             constexpr bool matches[] = { std::is_invocable_v<Invocables, Args...>... };
             constexpr std::size_t total = sizeof...(Invocables);
 
@@ -88,7 +93,7 @@ namespace prgrmr::concepts::invocable
                 }
             }
 
-            return total;
+            return 0;
         }
 
         template<typename ArgsTuple, typename... Invocables>
@@ -165,4 +170,31 @@ namespace prgrmr::concepts::invocable
 
     template<typename ArgsTuple, typename... Invocables>
     concept IsUniqueInvocable = is_unique_invocable<ArgsTuple, Invocables...>::value;
+
+    ///
+    /// Concept to enforce that an invocable can be tested for emptiness / nullability.
+    ///
+    template<typename F, typename... Args>
+    concept InvocableNullable =
+        std::invocable<F, Args...> &&
+        requires(const std::remove_reference_t<F>& f)
+        {
+            static_cast<bool>(f);
+        };
+
+    ///
+    /// Concept to enforce that an invocable returns a result (non-void).
+    ///
+    template<typename F, typename... Args>
+    concept InvocableWithResult =
+        std::invocable<F, Args...> &&
+        !std::is_void_v<std::invoke_result_t<F, Args...>>;
+
+    ///
+    /// Concept to enforce that an invocable is both nullable and returns a result (non-void).
+    ///
+    template<typename F, typename... Args>
+    concept InvocableNullableWithResult =
+        InvocableNullable<F, Args...> &&
+        InvocableWithResult<F, Args...>;
 }

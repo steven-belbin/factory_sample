@@ -36,48 +36,48 @@ int main()
     // Compiles, since the result types are the same & they have different signatures.
     static_assert_invocable_concepts<decltype(x), decltype(y), decltype(z)>();
 
-    // Test delegate_functions invoke_or_default
+    // Test delegate_functions invoke_optional
     using test_fn1 = std::function<int(int)>;
-    using test_fn2 = std::function<int(char)>;
+    using test_fn2 = std::function<int(std::string)>;
     generic::delegate_functions<test_fn1, test_fn2> delegates;
 
-    // Initially unregistered - should return default (0)
-    assert(delegates.invoke_or_default<test_fn1>(5) == 0);
-    assert(delegates.invoke_or_default<test_fn2>('a') == 0);
-    assert(delegates.invoke_or_default(5) == 0);
-    assert(delegates.invoke_or_default('a') == 0);
-    assert(delegates.invoke_or_default<0>(5) == 0);
-    assert(delegates.invoke_or_default<1>('a') == 0);
+    // Initially unregistered - should return std::nullopt
+    assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
+    assert(delegates.invoke_optional<test_fn2>("a") == std::nullopt);
+    assert(delegates.invoke_optional(5) == std::nullopt);
+    assert(delegates.invoke_optional(std::string("a")) == std::nullopt);
+    assert(delegates.invoke_optional<0>(5) == std::nullopt);
+    assert(delegates.invoke_optional<1>("a") == std::nullopt);
 
     // Register and verify
     delegates.register_function<test_fn1>([](int v) { return v * 2; });
-    delegates.register_function<test_fn2>([](char c) { return static_cast<int>(c); });
+    delegates.register_function<test_fn2>([](const std::string& s) { return static_cast<int>(s.length()); });
 
-    assert(delegates.invoke_or_default<test_fn1>(5) == 10);
-    assert(delegates.invoke_or_default<test_fn2>('A') == 65);
-    assert(delegates.invoke_or_default(5) == 10);
-    assert(delegates.invoke_or_default('A') == 65);
-    assert(delegates.invoke_or_default<0>(5) == 10);
-    assert(delegates.invoke_or_default<1>('A') == 65);
+    assert(delegates.invoke_optional<test_fn1>(5) == 10);
+    assert(delegates.invoke_optional<test_fn2>("abc") == 3);
+    assert(delegates.invoke_optional(5) == 10);
+    assert(delegates.invoke_optional(std::string("abc")) == 3);
+    assert(delegates.invoke_optional<0>(5) == 10);
+    assert(delegates.invoke_optional<1>("abc") == 3);
 
-    // Test key_delegates_functions invoke_or_default
+    // Test key_delegates_functions invoke_optional
     generic::key_delegates_functions<std::string, test_fn1, test_fn2> key_delegates;
 
-    // Missing key - should return default (0)
-    assert(key_delegates.invoke_or_default<test_fn1>("missing", 5) == 0);
-    assert(key_delegates.invoke_or_default("missing", 5) == 0);
-    assert(key_delegates.invoke_or_default<0>("missing", 5) == 0);
+    // Missing key - should return std::nullopt
+    assert(key_delegates.invoke_optional<test_fn1>("missing", 5) == std::nullopt);
+    assert(key_delegates.invoke_optional("missing", 5) == std::nullopt);
+    assert(key_delegates.invoke_optional<0>("missing", 5) == std::nullopt);
 
     // Register delegate and verify
     key_delegates.register_delegate("active", delegates);
-    assert(key_delegates.invoke_or_default<test_fn1>("active", 5) == 10);
-    assert(key_delegates.invoke_or_default<test_fn2>("active", 'A') == 65);
-    assert(key_delegates.invoke_or_default("active", 5) == 10);
-    assert(key_delegates.invoke_or_default("active", 'A') == 65);
-    assert(key_delegates.invoke_or_default<0>("active", 5) == 10);
-    assert(key_delegates.invoke_or_default<1>("active", 'A') == 65);
+    assert(key_delegates.invoke_optional<test_fn1>("active", 5) == 10);
+    assert(key_delegates.invoke_optional<test_fn2>("active", "abc") == 3);
+    assert(key_delegates.invoke_optional("active", 5) == 10);
+    assert(key_delegates.invoke_optional("active", std::string("abc")) == 3);
+    assert(key_delegates.invoke_optional<0>("active", 5) == 10);
+    assert(key_delegates.invoke_optional<1>("active", "abc") == 3);
 
-    std::cout << "All invoke_or_default assertions passed successfully!\n";
+    std::cout << "All invoke_optional assertions passed successfully!\n";
 
     return 0;
 }
