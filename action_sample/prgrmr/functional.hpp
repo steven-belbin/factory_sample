@@ -9,16 +9,15 @@ namespace prgrmr
 {
 ///
 /// <summary>
-///  When the function is defined invokes a function with the given arguments.
-///  Otherwise, doesn't invoke the function.
+///  When an invocable function is defined, then applies the invocable function using the tuple of arguments.
 /// </summary>
 ///
-/// <param name="function">The function to be invoked.</param>
-/// <param name="args">The arguments to pass to the function.</param>
+/// <param name="invocable">The invocable function to be applied.</param>
+/// <param name="args">The tuple of arguments to pass to the function.</param>
 ///
 /// <returns>
-///  An optional containing the result of invoking the function.
-//   Otherwise, std::nullopt to indicate the function was not invoked.
+///  An optional containing the result of applying the function.
+//   Otherwise, std::nullopt when the invocable function is not defined.
 /// </returns>
 ///
 template<class... args_t>
@@ -32,16 +31,15 @@ auto apply_optional(concepts::invocable::InvocableNullableWithResult<const args_
 
 ///
 /// <summary>
-///  When the function is defined invokes a function with the given arguments.
-///  Otherwise, doesn't invoke the function.
+///  When an invocable function is defined, then applies the invocable function using the arguments.
 /// </summary>
 ///
-/// <param name="function">The function to be invoked.</param>
+/// <param name="invocable">The invocable function to be invoked.</param>
 /// <param name="args">The arguments to pass to the function.</param>
 ///
 /// <returns>
 ///  An optional containing the result of invoking the function.
-//   Otherwise, std::nullopt to indicate the function was not invoked.
+///  Otherwise, std::nullopt when the invocable function is not defined.
 /// </returns>
 ///
 template<class... args_t>

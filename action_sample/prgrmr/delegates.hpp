@@ -9,11 +9,9 @@
 
 namespace prgrmr
 {
-
 ///
 /// <summary>
-///   This class supports one to many invocable functions which can be registered and
-///   unregistered at runtime.
+///   Contains one to many delegates which can be registered and unregistered at runtime.
 /// </summary>
 ///
 template<class... functions_t>
@@ -284,15 +282,16 @@ public:
 
    ///
    /// <summary>
-   ///   Locates the function by its tuple index and when it's registered, invokes it.
+   ///   Locates the function by its tuple index and if one a registered, then invokes it.
    /// </summary>
    ///
    /// <param name="args">The arguments to pass to the function.</param>
    ///
    /// <returns>
-   ///   When the function is registered, the result is wrapped in std::optional.
-   ///   Otherwise std::nullopt indicates that the function isn't registered.
+   ///  An optional containing the result of invoking the function.
+   ///  Otherwise, std::nullopt when the invocable function is not defined.
    /// </returns>
+   ///
    ///
    /// <seealso cref="prgrmr::invoke_optional"/>
    ///
