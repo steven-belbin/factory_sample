@@ -144,17 +144,14 @@
     <ClInclude Include="nike\shoe.h" />
     <ClInclude Include="nike\shoe_factory.h" />
     <ClInclude Include="nike\shoe_factory_configuration.h" />
-    <ClInclude Include="prgrmr\concepts\arguments.h" />
-    <ClInclude Include="prgrmr\concepts\concepts.h" />
-    <ClInclude Include="prgrmr\concepts\invocable.h" />
-    <ClInclude Include="prgrmr\generic\class_name.h" />
-    <ClInclude Include="prgrmr\generic\factory.h" />
-    <ClInclude Include="prgrmr\traits\invocable.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="prgrmr\traits\arguments.h">
-      <FileType>Document</FileType>
-    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\arguments.hpp" />
+    <ClInclude Include="prgrmr\concepts\concepts.hpp" />
+    <ClInclude Include="prgrmr\concepts\invocable.hpp" />
+    <ClInclude Include="prgrmr\class_name.hpp" />
+    <ClInclude Include="prgrmr\delegates_map.hpp" />
+    <ClInclude Include="prgrmr\delegates.hpp" />
+    <ClInclude Include="prgrmr\factory_map.hpp" />
+    <ClInclude Include="prgrmr\functional.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

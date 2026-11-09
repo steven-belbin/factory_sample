@@ -3,7 +3,7 @@
 #include <string_view>
 #include <typeinfo>
 
-namespace prgrmr::generic
+namespace prgrmr
 {
 template<class T>
 constexpr auto class_name()

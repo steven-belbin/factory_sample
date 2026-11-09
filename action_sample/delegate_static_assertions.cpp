@@ -1,5 +1,6 @@
-#include <prgrmr/concepts/concepts.h>
-#include <prgrmr/generic/factory.h>
+#include <prgrmr/delegates.hpp>
+#include <prgrmr/delegates_map.hpp>
+#include <prgrmr/concepts/concepts.hpp>
 #include <cassert>
 #include <iostream>
 
@@ -39,7 +40,7 @@ int main()
     // Test delegate_functions invoke_optional
     using test_fn1 = std::function<int(int)>;
     using test_fn2 = std::function<int(std::string)>;
-    generic::delegate_functions<test_fn1, test_fn2> delegates;
+    delegates<test_fn1, test_fn2> delegates;
 
     // Initially unregistered - should return std::nullopt
     assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
@@ -60,22 +61,22 @@ int main()
     assert(delegates.invoke_optional<0>(5) == 10);
     assert(delegates.invoke_optional<1>("abc") == 3);
 
-    // Test key_delegates_functions invoke_optional
-    generic::key_delegates_functions<std::string, test_fn1, test_fn2> key_delegates;
+    // Test delegates_map invoke_optional
+    delegates_map<std::string, test_fn1, test_fn2> delegates_map;
 
     // Missing key - should return std::nullopt
-    assert(key_delegates.invoke_optional<test_fn1>("missing", 5) == std::nullopt);
-    assert(key_delegates.invoke_optional("missing", 5) == std::nullopt);
-    assert(key_delegates.invoke_optional<0>("missing", 5) == std::nullopt);
+    assert(delegates_map.invoke_optional<test_fn1>("missing", 5) == std::nullopt);
+    assert(delegates_map.invoke_optional("missing", 5) == std::nullopt);
+    assert(delegates_map.invoke_optional<0>("missing", 5) == std::nullopt);
 
     // Register delegate and verify
-    key_delegates.register_delegate("active", delegates);
-    assert(key_delegates.invoke_optional<test_fn1>("active", 5) == 10);
-    assert(key_delegates.invoke_optional<test_fn2>("active", "abc") == 3);
-    assert(key_delegates.invoke_optional("active", 5) == 10);
-    assert(key_delegates.invoke_optional("active", std::string("abc")) == 3);
-    assert(key_delegates.invoke_optional<0>("active", 5) == 10);
-    assert(key_delegates.invoke_optional<1>("active", "abc") == 3);
+    delegates_map.register_delegate("active", delegates);
+    assert(delegates_map.invoke_optional<test_fn1>("active", 5) == 10);
+    assert(delegates_map.invoke_optional<test_fn2>("active", "abc") == 3);
+    assert(delegates_map.invoke_optional("active", 5) == 10);
+    assert(delegates_map.invoke_optional("active", std::string("abc")) == 3);
+    assert(delegates_map.invoke_optional<0>("active", 5) == 10);
+    assert(delegates_map.invoke_optional<1>("active", "abc") == 3);
 
     std::cout << "All invoke_optional assertions passed successfully!\n";
 

@@ -19,14 +19,8 @@
     <Filter Include="Header Files\prgrmr">
       <UniqueIdentifier>{3362ab54-b360-4fed-afab-9682c540aa89}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\prgrmr\generic">
-      <UniqueIdentifier>{4221d302-cb45-45ad-9a4a-ab5015917fb4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\prgrmr\concepts">
       <UniqueIdentifier>{4685c6f4-ee34-4783-9ec1-fbd3d481636b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\prgrmr\traits">
-      <UniqueIdentifier>{23cae576-4554-4807-946d-1d16fa76009e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,32 +42,35 @@
     <ClInclude Include="nike\runner.h">
       <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="prgrmr\generic\factory.h">
-      <Filter>Header Files\prgrmr\generic</Filter>
-    </ClInclude>
-    <ClInclude Include="prgrmr\generic\class_name.h">
-      <Filter>Header Files\prgrmr\generic</Filter>
-    </ClInclude>
     <ClInclude Include="nike\bird.h">
       <Filter>Header Files\nike</Filter>
     </ClInclude>
-    <ClInclude Include="prgrmr\concepts\concepts.h">
-      <Filter>Header Files\prgrmr\concepts</Filter>
-    </ClInclude>
-    <ClInclude Include="prgrmr\concepts\invocable.h">
-      <Filter>Header Files\prgrmr\concepts</Filter>
-    </ClInclude>
-    <ClInclude Include="prgrmr\concepts\arguments.h">
-      <Filter>Header Files\prgrmr\concepts</Filter>
-    </ClInclude>
-    <ClInclude Include="prgrmr\traits\arguments.h">
-      <Filter>Header Files\prgrmr\traits</Filter>
-    </ClInclude>
-    <ClInclude Include="prgrmr\traits\invocable.h">
-      <Filter>Header Files\prgrmr\traits</Filter>
-    </ClInclude>
     <ClInclude Include="nike\shoe_factory_configuration.h">
       <Filter>Header Files\nike</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\concepts.hpp">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\invocable.hpp">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\concepts\arguments.hpp">
+      <Filter>Header Files\prgrmr\concepts</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\class_name.hpp">
+      <Filter>Header Files\prgrmr</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\delegates_map.hpp">
+      <Filter>Header Files\prgrmr</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\delegates.hpp">
+      <Filter>Header Files\prgrmr</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\factory_map.hpp">
+      <Filter>Header Files\prgrmr</Filter>
+    </ClInclude>
+    <ClInclude Include="prgrmr\functional.hpp">
+      <Filter>Header Files\prgrmr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

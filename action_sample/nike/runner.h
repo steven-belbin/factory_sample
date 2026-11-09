@@ -1,7 +1,7 @@
 #pragma once
 
 #include "shoe.h"
-#include <prgrmr/generic/class_name.h>
+#include <prgrmr/class_name.hpp>
 #include <iostream>
 
 namespace nike
@@ -14,7 +14,7 @@ public:
 
     void do_it() override
     {
-        std::cout << "Inside " << prgrmr::generic::class_name(*this) << "." << std::endl;
+        std::cout << "Inside " << prgrmr::class_name(*this) << "." << std::endl;
     }
 };
 }

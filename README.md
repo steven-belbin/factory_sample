@@ -1,4 +1,4 @@
-# Generic Factory (factory_sample)
+ï»¿# Generic Factory (factory_sample)
 
 A small, header-only C++20 library and samples demonstrating a generic factory pattern that can construct objects (often through an abstract interface) using a flexible set of functors. The factory lets you decouple construction logic from concrete types and supports runtime configuration to decide which constructor/functor to use.
 
@@ -7,10 +7,11 @@ This repository explores two complementary goals:
 - Promote configuration-at-runtime to choose which factory functor builds the product, while still enabling certain choices to be bound at compile time for performance or safety.
 
 Contents
-- `prgrmr/generic/factory.h` — Core generic factory types and helpers.
-- `prgrmr/generic/function_signature_checks.h`, `prgrmr/generic/varadic_type_checks.h` — Compile-time checks used to validate functors and signatures.
-- `prgrmr/concepts/concepts.h` — Concept-like utilities and static assertions.
-- `action_sample/delegate_static_assertions.cpp` — Small sample showing compile-time signature checks and examples of functors/lambdas.
+- `prgrmr/factory_map.hpp` - Core generic factory map types and helpers.
+- `prgrmr/delegates.hpp`, `prgrmr/delegates_map.hpp` - Delegate containers supporting multiple function signatures.
+- `prgrmr/functional.hpp` - Functional invocation utilities (`apply_optional`, `invoke_optional`).
+- `prgrmr/concepts/concepts.hpp` - C++20 concept utilities and static assertions.
+- `action_sample/delegate_static_assertions.cpp` - Small sample showing compile-time signature checks and examples of functors/lambdas.
 
 Why use this
 - Build objects through many different call signatures (lambdas, std::function, free functions, bind expressions) without changing the product type.

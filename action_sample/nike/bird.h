@@ -1,7 +1,7 @@
 #pragma once
 
 #include "shoe.h"
-#include <prgrmr/generic/class_name.h>
+#include <prgrmr/class_name.hpp>
 #include <iostream>
 
 namespace nike
@@ -19,7 +19,7 @@ public:
     {
         _a *= 10;
         _b *= 10.0;
-        std::cout << "Inside " << prgrmr::generic::class_name(*this) << ". a: " << _a << ", b: " << _b << std::endl;
+        std::cout << "Inside " << prgrmr::class_name(*this) << ". a: " << _a << ", b: " << _b << std::endl;
     }
 
 private:

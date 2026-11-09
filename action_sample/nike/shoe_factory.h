@@ -1,7 +1,7 @@
 #pragma once
 
 #include "shoe.h"
-#include <prgrmr/generic/factory.h>
+#include <prgrmr/factory_map.hpp>
 #include <functional>
 #include <memory>
 #include <string>
@@ -50,7 +50,7 @@ using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
 /// #endregion
 
 using shoe_factory =
-      prgrmr::generic::key_class_factory<std::string,
-                                         base_constructor,
-                                         numerics_constructor>;
+      prgrmr::factory_map<std::string,
+                          base_constructor,
+                          numerics_constructor>;
 }
