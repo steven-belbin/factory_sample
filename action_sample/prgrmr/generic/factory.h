@@ -14,31 +14,44 @@ namespace prgrmr::generic
 
 ///
 /// <summary>
-///  When the function is defined invokes a function with the given arguments,
-///  otherwise doesn't invoke the function.
+///  When the function is defined invokes a function with the given arguments.
+///  Otherwise, doesn't invoke the function.
 /// </summary>
 ///
 /// <param name="function">The function to be invoked.</param>
 /// <param name="args">The arguments to pass to the function.</param>
 ///
 /// <returns>
-///  An optional containing the result of the function if it is defined, otherwise nullopt.
+///  An optional containing the result of invoking the function.
+//   Otherwise, std::nullopt to indicate the function was not invoked.
 /// </returns>
 ///
 template<class... args_t>
 auto apply_optional(concepts::invocable::InvocableNullableWithResult<const args_t&...> auto&& invocable,
                     const std::tuple<args_t...>& args)
-     -> std::optional<std::invoke_result_t<decltype(invocable), const args_t&...>>
 {
    return (invocable)
         ? std::make_optional(std::apply(std::forward<decltype(invocable)>(invocable), args))
         : std::nullopt;
 }
 
+///
+/// <summary>
+///  When the function is defined invokes a function with the given arguments.
+///  Otherwise, doesn't invoke the function.
+/// </summary>
+///
+/// <param name="function">The function to be invoked.</param>
+/// <param name="args">The arguments to pass to the function.</param>
+///
+/// <returns>
+///  An optional containing the result of invoking the function.
+//   Otherwise, std::nullopt to indicate the function was not invoked.
+/// </returns>
+///
 template<class... args_t>
 auto invoke_optional(concepts::invocable::InvocableNullableWithResult<const args_t&...> auto&& invocable,
                      const args_t&... args)
-     -> std::optional<std::invoke_result_t<decltype(invocable), const args_t&...>>
 {
    return (invocable)
         ? std::make_optional(std::invoke(std::forward<decltype(invocable)>(invocable), args...))
@@ -152,7 +165,7 @@ public:
    /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
    ///
    template<class function_t>
-   decltype(auto) get_function() const
+   auto get_function() const
    {
       return std::get<stored_type<function_t>>(_functions);
    }
@@ -167,7 +180,7 @@ public:
    /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
    ///
    template<size_t index>
-   decltype(auto) get_function() const
+   auto get_function() const
    {
       return std::get<index>(_functions);
    }
@@ -245,7 +258,7 @@ public:
    /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
    ///
    template<class function_t, class... args_t>
-   decltype(auto) invoke(args_t&&... args)
+   auto invoke(args_t&&... args)
    {
       return get_function<function_t>()(std::forward<args_t>(args)...);
    }
@@ -256,7 +269,7 @@ public:
    /// </summary>
    ///
    template<class... args_t>
-   decltype(auto) invoke(args_t&&... args)
+   auto invoke(args_t&&... args)
    {
        using function_t = concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
 
@@ -273,14 +286,14 @@ public:
    /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
    ///
    template<size_t index, class... args_t>
-   decltype(auto) invoke(args_t&&... args)
+   auto invoke(args_t&&... args)
    {
       return get_function<index>()(std::forward<args_t>(args)...);
    }
 
    ///
    /// <summary>
-   ///   When the function is registered, invokes a specific function by its signature.
+   ///   Locates the function by its signature and when it's registered, invokes it.
    /// </summary>
    ///
    /// <param name="args">The arguments to pass to the function.</param>
@@ -289,6 +302,8 @@ public:
    ///   When the function is registered, the result is wrapped in std::optional.
    ///   Otherwise std::nullopt indicates that the function isn't registered.
    /// </returns>
+   ///
+   /// <seealso cref="generic::invoke_optional"/>
    ///
    template<class function_t, class... args_t>
    requires concepts::invocable::InvocableWithResult<function_t, args_t...>
@@ -299,7 +314,7 @@ public:
 
    ///
    /// <summary>
-   ///   When the function is registered, invokes a specific function by matching the given argument types.
+   ///   Locates the function by its signature and when it's registered, invokes it.
    /// </summary>
    ///
    /// <param name="args">The arguments to pass to the function.</param>
@@ -308,6 +323,8 @@ public:
    ///   When the function is registered, the result is wrapped in std::optional.
    ///   Otherwise std::nullopt indicates that the function isn't registered.
    /// </returns>
+   ///
+   /// <seealso cref="invoke_optional<function_t>"/>
    ///
    template<class... args_t>
    auto invoke_optional(args_t&&... args) const
@@ -319,11 +336,17 @@ public:
 
    ///
    /// <summary>
-   ///   Invokes a specific function by its tuple index when registered,
-   ///   otherwise returns std::nullopt.
+   ///   Locates the function by its tuple index and when it's registered, invokes it.
    /// </summary>
    ///
    /// <param name="args">The arguments to pass to the function.</param>
+   ///
+   /// <returns>
+   ///   When the function is registered, the result is wrapped in std::optional.
+   ///   Otherwise std::nullopt indicates that the function isn't registered.
+   /// </returns>
+   ///
+   /// <seealso cref="generic::invoke_optional"/>
    ///
    template<size_t index, class... args_t>
    auto invoke_optional(args_t&&... args) const
@@ -495,14 +518,13 @@ public:
    ///
    /// <param name="key">The unique identifying key in which the function was registered under.</param>
    ///
-   decltype(auto) get_delegate(const key_type& key) const
+   auto get_delegate(const key_type& key) const
    {
-      if (const auto& iter = _delegates.find(key); iter != std::end(_delegates))
-      {
-         return std::addressof(iter->second);
-      }
-
-      return static_cast<const delegate_type*>(nullptr);
+      const auto& iter = _delegates.find(key);
+      
+      return (iter != std::end(_delegates))
+           ? std::addressof(iter->second)
+           : nullptr;
    }
 
    ///
@@ -512,14 +534,13 @@ public:
    ///
    /// <param name="key">The unique identifying key in which the function was registered under.</param>
    ///
-   decltype(auto) get_delegate(const key_type& key)
+   auto get_delegate(const key_type& key)
    {
-      if (const auto& iter = _delegates.find(key); iter != std::end(_delegates))
-      {
-         return std::addressof(iter->second);
-      }
-
-      return static_cast<delegate_type*>(nullptr);
+      const auto& iter = _delegates.find(key);
+      
+      return (iter != std::end(_delegates))
+           ? std::addressof(iter->second)
+           : nullptr;
    }
 
    ///
@@ -532,14 +553,11 @@ public:
    template<class function_t>
    auto get_function(const key_type& key) const
    {
-      if (const auto delegate = get_delegate(key); delegate != nullptr)
-      {
-         return delegate->template get_function<function_t>();
-      }
+      const auto delegate = get_delegate(key);
 
-      using function_type = std::decay_t<decltype(std::declval<delegate_type>().template get_function<function_t>())>;
-
-      return function_type{};
+      return (delegate != nullptr)
+           ? delegate->template get_function<function_t>()
+           : nullptr;
    }
 
    ///
@@ -552,14 +570,11 @@ public:
    template<size_t index>
    auto get_function(const key_type& key) const
    {
-      if (const auto delegate = get_delegate(key); delegate != nullptr)
-      {
-         return delegate->template get_function<index>();
-      }
+      const auto delegate = get_delegate(key);
 
-      using function_type = std::decay_t<decltype(std::declval<delegate_type>().template get_function<index>())>;
-
-      return function_type{};
+      return (delegate != nullptr)
+           ? delegate->template get_function<index>()
+           : nullptr;
    }
 
    ///
@@ -613,16 +628,14 @@ public:
    ///
    template<class function_t, class... args_t>
    requires concepts::invocable::InvocableWithResult<function_t, args_t...>
-   std::optional<result_type> invoke_optional(const key_type& key,
-                                              args_t&&... args) const
+   auto invoke_optional(const key_type& key,
+                        args_t&&... args) const
    {
-      if (const auto delegate = get_delegate(key); delegate != nullptr)
-      {
-         return delegate->template
-                invoke_optional<function_t>(std::forward<args_t>(args)...);
-      }
+      const auto delegate = get_delegate(key);
 
-      return std::nullopt;
+      return (delegate != nullptr)
+           ? delegate->template invoke_optional<function_t>(std::forward<args_t>(args)...)
+           : std::nullopt;
    }
 
    ///
@@ -637,8 +650,8 @@ public:
    /// <seealso cref="delegate_functions::invoke_optional" />
    ///
    template<class... args_t>
-   std::optional<result_type> invoke_optional(const key_type& key,
-                                              args_t&&... args) const
+   auto invoke_optional(const key_type& key,
+                        args_t&&... args) const
    {
        using function_t = concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
 
@@ -657,15 +670,14 @@ public:
    /// <seealso cref="delegate_functions::invoke_optional" />
    ///
    template<size_t index, class... args_t>
-   std::optional<result_type> invoke_optional(const key_type& key,
-                                              args_t&&... args) const
+   auto invoke_optional(const key_type& key,
+                        args_t&&... args) const
    {
-      if (const auto delegate = get_delegate(key); delegate != nullptr)
-      {
-         return delegate->template invoke_optional<index>(std::forward<args_t>(args)...);
-      }
-
-      return std::nullopt;
+      const auto delegate = get_delegate(key);
+      
+      return (delegate != nullptr)
+           ? delegate->template invoke_optional<index>(std::forward<args_t>(args)...)
+           : std::nullopt;
    }
 
    ///
@@ -689,7 +701,7 @@ public:
    ///
    /// <returns>A const reference to a delegate of functions.</returns>
    ///
-   decltype(auto) operator[](const key_type& key) const
+   auto operator[](const key_type& key) const
    {
       return _delegates[key];
    }
@@ -703,7 +715,7 @@ public:
    ///
    /// <returns>A reference to a delegate of functions.</returns>
    ///
-   decltype(auto) operator[](const key_type& key)
+   auto operator[](const key_type& key)
    {
       return _delegates[key];
    }
@@ -719,7 +731,7 @@ public:
    ///
    /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
    ///
-   decltype(auto) at(const key_type& key) const
+   auto at(const key_type& key) const
    {
       return _delegates.at(key);
    }
@@ -735,7 +747,7 @@ public:
    ///
    /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
    ///
-   decltype(auto) at(const key_type& key)
+   auto at(const key_type& key)
    {
       return _delegates.at(key);
    }
@@ -955,7 +967,7 @@ public:
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<class function_t>
-   decltype(auto) get_function(const key_type& key) const
+   auto get_function(const key_type& key) const
    {
       return _delegates.template get_function<function_t>(key);
    }
@@ -969,7 +981,7 @@ public:
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<size_t index>
-   decltype(auto) get_function(const key_type& key) const
+   auto get_function(const key_type& key) const
    {
       return _delegates.template get_function<index>(key);
    }
