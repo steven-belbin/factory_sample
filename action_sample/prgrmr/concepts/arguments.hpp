@@ -5,38 +5,50 @@
 namespace prgrmr::concepts::arguments
 {
     ///
-    /// Concept to check the number of template arguments is equal to the count.
+    /// <summary>
+    ///   Verifies if the templated arguments matches the specified count.
+    /// </summary>
     ///
-    template<std::size_t Count, typename ... Arguments>
-    concept IsCountEqual = (sizeof...(Arguments) == Count);
+    template<std::size_t TCount, typename ... TArguments>
+    concept IsCountEqual = (sizeof...(TArguments) == TCount);
 
     ///
-    /// Concept to check for when there aren't any arguments.
+    /// <summary>
+    ///   Verifies if that there are no templated arguments.
+    /// </summary>
     ///
-    template<typename ... Arguments>
-    concept IsEmpty = IsCountEqual<0, Arguments...>;
+    template<typename ... TArguments>
+    concept IsEmpty = IsCountEqual<0, TArguments...>;
 
     ///
-    /// Concept to check for when there is at least one argument.
+    /// <summary>
+    ///   Verifies if that templated arguments is not empty.
+    /// </summary>
     ///
-    template<typename ... Arguments>
-    concept IsNotEmpty = not IsEmpty<Arguments...>;
+    template<typename ... TArguments>
+    concept IsNotEmpty = not IsEmpty<TArguments...>;
 
     ///
-    /// Concept to check that the number of template arguments is at least the count.
+    /// <summary>
+    ///   Verifies if that templated arguments has at least the specified count.
+    /// </summary>
     ///
-    template<std::size_t Count, typename ... Arguments>
-    concept IsAtLeast = (sizeof...(Arguments) >= Count);
+    template<std::size_t TCount, typename ... TArguments>
+    concept IsAtLeast = (sizeof...(TArguments) >= TCount);
 
     ///
-    /// Concept to check for when there is precisely one argument.
+    /// <summary>
+    ///   Verifies if that templated arguments has exactly one argument.
+    /// </summary>
     ///
-    template<typename ... Arguments>
-    concept IsSingle = IsCountEqual<1, Arguments...>;
+    template<typename ... TArguments>
+    concept IsSingle = IsCountEqual<1, TArguments...>;
 
     ///
-    /// Concept to check for when there are precisely a pair of arguments.
+    /// <summary>
+    ///   Verifies if that templated arguments has exactly two arguments.
+    /// </summary>
     ///
-    template<typename ... Arguments>
-    concept IsPair = IsCountEqual<2, Arguments...>;
+    template<typename ... TArguments>
+    concept IsPair = IsCountEqual<2, TArguments...>;
 }
