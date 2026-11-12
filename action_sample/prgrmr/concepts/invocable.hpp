@@ -85,39 +85,39 @@ namespace prgrmr::concepts::invocable
         ///   Checks that all signatures are unique.
         /// </summary>
         ///
-        template<typename... Signatures>
+        template<typename... TSignatures>
         consteval bool are_invocables_signatures_unique()
         {
-            if constexpr (sizeof...(Signatures) <= 1)
+            if constexpr (sizeof...(TSignatures) <= 1)
             {
                 return true;
             }
             else
             {
-                return []<typename Signature, typename... RemainingSignatures>(std::type_identity<Signature>, std::type_identity<RemainingSignatures>...)
+                return []<typename TSignature, typename... TRemainingSignatures>(std::type_identity<TSignature>, std::type_identity<TRemainingSignatures>...)
                 {
-                    if constexpr ((std::is_same_v<Signature, RemainingSignatures> || ...))
+                    if constexpr ((std::is_same_v<TSignature, TRemainingSignatures> || ...))
                     {
                         return false;
                     }
                     else
                     {
-                        return are_invocables_signatures_unique<RemainingSignatures...>();
+                        return are_invocables_signatures_unique<TRemainingSignatures...>();
                     }
-                }(std::type_identity<Signatures>{}...);
+                }(std::type_identity<TSignatures>{}...);
             }
         }
 
-        template<typename... Invocables, typename... TParameters>
+        template<typename... TInvocables, typename... TParameters>
         consteval std::size_t find_invocable_index(std::tuple<TParameters...>* = nullptr)
         {
-            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, TParameters...> ? 1 : 0) + ...);
+            constexpr std::size_t match_count = ((std::is_invocable_v<TInvocables, TParameters...> ? 1 : 0) + ...);
 
             static_assert(match_count > 0, "No matching function found for the provided arguments.");
             static_assert(match_count <= 1, "Ambiguous call: multiple matching functions found for the provided arguments.");
 
-            constexpr bool matches[] = { std::is_invocable_v<Invocables, TParameters...>... };
-            constexpr std::size_t count = sizeof...(Invocables);
+            constexpr bool matches[] = { std::is_invocable_v<TInvocables, TParameters...>... };
+            constexpr std::size_t count = sizeof...(TInvocables);
 
             for (std::size_t index = 0; index < count; ++index)
             {
@@ -130,15 +130,15 @@ namespace prgrmr::concepts::invocable
             return 0;
         }
 
-        template<typename Parameters, typename... Invocables>
+        template<typename TParameters, typename... TInvocables>
         struct find_invocable;
 
-        template<typename... TParameters, typename... Invocables>
-        struct find_invocable<std::tuple<TParameters...>, Invocables...>
+        template<typename... TParameters, typename... TInvocables>
+        struct find_invocable<std::tuple<TParameters...>, TInvocables...>
         {
             using type = std::tuple_element_t<
-                find_invocable_index<Invocables...>(static_cast<std::tuple<TParameters...>*>(nullptr)),
-                std::tuple<Invocables...>>;
+                find_invocable_index<TInvocables...>(static_cast<std::tuple<TParameters...>*>(nullptr)),
+                std::tuple<TInvocables...>>;
         };
     }
 
@@ -178,64 +178,68 @@ namespace prgrmr::concepts::invocable
 
     ///
     /// <summary>
-    ///   Deduce the invocable based on its parameters from the series of invocables.
-    /// </summary>
-    ///
-    template<typename Parameters, typename... Invocables>
-    using find_invocable_type = typename detail::find_invocable<Parameters, Invocables...>::type;
-
-    ///
-    /// <summary>
     ///   A series of invocables.
     /// </summary>
     ///
-    template<typename... Invocables>
-    using invocables_type = std::tuple<std::decay_t<Invocables>...>;
+    template<typename... TInvocables>
+    using invocables_type = std::tuple<std::decay_t<TInvocables>...>;
+
+    ///
+    /// <summary>
+    ///   Deduce the invocable based on its parameters from the series of invocables.
+    /// </summary>
+    ///
+    template<typename TParameters, typename... TInvocables>
+    using find_invocable_type = typename detail::find_invocable<TParameters, TInvocables...>::type;
 
     ///
     /// <summary>
     ///   The invocables common result type (taken from the first).
     /// </summary>
     ///
-    template<typename... Invocables>
-    requires (sizeof...(Invocables) > 0)
-    using invocables_result_type = invocable_result_type<std::tuple_element_t<0, std::tuple<Invocables...>>>;
+    template<typename... TInvocables>
+    requires (sizeof...(TInvocables) > 0)
+    using invocables_result_type = invocable_result_type<std::tuple_element_t<0, std::tuple<TInvocables...>>>;
 
     ///
     /// <summary>
     ///   Verify that all invocables in the series have the same result type.
     /// </summary>
     ///
-    template<typename... Invocables>
-    concept IsSameResultType = (sizeof...(Invocables) <= 1) ||
+    template<typename... TInvocables>
+    concept IsSameResultType = (sizeof...(TInvocables) <= 1) ||
         []<typename TInvocable, typename... RemaingInvocables>(std::type_identity<TInvocable>, std::type_identity<RemaingInvocables>...)
         {
             return (std::is_same_v<invocable_result_type<TInvocable>, invocable_result_type<RemaingInvocables>> && ...);
-        }(std::type_identity<Invocables>{}...);
+        }(std::type_identity<TInvocables>{}...);
 
     ///
     /// <summary>
     ///   Verify that each invocable in the series has a unique signature -> TResult(TParameters...).
     /// </summary>
     ///
-    template<typename... Invocables>
-    concept AreInvocablesSignaturesUnique = detail::are_invocables_signatures_unique<detail::invocable_signature_type<Invocables>...>();
+    template<typename... TInvocables>
+    concept AreInvocablesSignaturesUnique = detail::are_invocables_signatures_unique<detail::invocable_signature_type<TInvocables>...>();
 
-    ///
     ///
     /// <summary>
     ///   Verify that each invocable in the series has different parameters.
     /// </summary>
     ///
-    template<typename Parameters, typename... Invocables>
+    template<typename TParameters, typename... TInvocables>
     struct are_invocables_parameters_unique : std::false_type {};
 
-    template<typename... TParameters, typename... Invocables>
-    struct are_invocables_parameters_unique<std::tuple<TParameters...>, Invocables...>
-         : std::bool_constant<((std::is_invocable_v<Invocables, TParameters...> ? 1 : 0) + ...) == 1> {};
+    ///
+    /// <summary>
+    ///   Verify that each invocable in the series has different parameters.
+    /// </summary>
+    ///
+    template<typename... TParameters, typename... TInvocables>
+    struct are_invocables_parameters_unique<std::tuple<TParameters...>, TInvocables...>
+         : std::bool_constant<((std::is_invocable_v<TInvocables, TParameters...> ? 1 : 0) + ...) == 1> {};
 
-    template<typename Parameters, typename... Invocables>
-    concept AreInvocablesParametersUnique = are_invocables_parameters_unique<Parameters, Invocables...>::value;
+    template<typename TParameters, typename... TInvocables>
+    concept AreInvocablesParametersUnique = are_invocables_parameters_unique<TParameters, TInvocables...>::value;
 
     ///
     /// <summary>
