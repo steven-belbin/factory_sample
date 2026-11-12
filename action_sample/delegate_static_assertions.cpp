@@ -79,8 +79,10 @@ int main()
     assert(delegates_map.invoke_optional<0>("active", 5) == 10);
     assert(delegates_map.invoke_optional<1>("active", "abc") == 3);
 
+    using test_fnx = std::function<int(int)>;
+
     // Test delegate reset and invoke_optional
-    delegate<test_fn1> single_delegate;
+    delegate<test_fnx> single_delegate;
     assert(single_delegate.invoke_optional(5) == std::nullopt);
 
     single_delegate.reset([](int v) { return v * 3; });
@@ -96,6 +98,25 @@ int main()
 
     single_delegate.reset(nullptr);
     assert(single_delegate.invoke_optional(5) == std::nullopt);
+
+    // Test delegate<int(int)> with signature type directly
+    delegate<int(int)> sig_delegate;
+    assert(sig_delegate.invoke_optional(5) == std::nullopt);
+
+    sig_delegate.reset([](int v) { return v * 10; });
+    assert(sig_delegate.invoke_optional(5) == 50);
+    assert(sig_delegate.invoke(5) == 50);
+    assert(sig_delegate(5) == 50);
+
+    //sig_delegate.reset();
+    sig_delegate = nullptr;
+    assert(sig_delegate.invoke_optional(5) == std::nullopt);
+
+    // Test delegate with constructor taking a lambda
+    delegate<int(int)> init_delegate([](int v) { return v + 1; });
+    assert(init_delegate.invoke(5) == 6);
+    assert(init_delegate(5) == 6);
+    assert(init_delegate.invoke_optional(5) == 6);
 
     std::cout << "All invoke_optional assertions passed successfully!\n";
 

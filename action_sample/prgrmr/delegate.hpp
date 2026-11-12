@@ -3,6 +3,7 @@
 #include "./functional.hpp"
 #include "./concepts/invocable.hpp"
 #include <cstddef>
+#include <functional>
 
 namespace prgrmr
 {
@@ -15,7 +16,8 @@ namespace detail
    class delegate_base<TInvocable, std::tuple<TParameters...>>
    {
    protected:
-      using invocable_type = TInvocable;
+      using signature_type = concepts::invocable::invocable_signature_type<TInvocable>;
+      using invocable_type = std::function<signature_type>;
 
       invocable_type _invocable;
 
@@ -28,13 +30,10 @@ namespace detail
       delegate_base& operator=(const delegate_base&) = delete;
       delegate_base& operator=(delegate_base&&) = default;
 
-      explicit delegate_base(const invocable_type& invocable)
-      : _invocable{ invocable }
-      {
-      }
-
-      explicit delegate_base(invocable_type&& invocable)
-      : _invocable{ std::forward<invocable_type>(invocable) }
+      template<typename _TInvocable>
+      requires (!std::is_same_v<std::remove_cvref_t<_TInvocable>, delegate_base> && std::constructible_from<invocable_type, _TInvocable>)
+      explicit delegate_base(_TInvocable&& invocable)
+      : _invocable{ std::forward<_TInvocable>(invocable) }
       {
       }
 
@@ -166,9 +165,10 @@ class delegate final
    using base_type = detail::delegate_base<TInvocable, concepts::invocable::invocable_parameters_type<TInvocable>>;
 
 public:
-   using invocable_type = TInvocable;
-   using parameters_type = concepts::invocable::invocable_parameters_type<invocable_type>;
-   using result_type = concepts::invocable::invocable_result_type<invocable_type>;
+   using signature_type = typename base_type::signature_type;
+   using invocable_type = typename base_type::invocable_type;
+   using parameters_type = concepts::invocable::invocable_parameters_type<signature_type>;
+   using result_type = concepts::invocable::invocable_result_type<signature_type>;
 
    using base_type::invocable;
    using base_type::reset;
@@ -194,20 +194,10 @@ public:
    ///
    /// <param name="invocable">An invocable.</param>
    ///
-   explicit delegate(const invocable_type& invocable)
-   : base_type{ invocable }
-   {
-   }
-
-   ///
-   /// <summary>
-   ///   Construct and registers to an invocable.
-   /// </summary>
-   ///
-   /// <param name="invocable">An invocable.</param>
-   ///
-   explicit delegate(invocable_type&& invocable)
-   : base_type{ std::forward<invocable_type>(invocable) }
+   template<typename _TInvocable>
+   requires (!std::is_same_v<std::remove_cvref_t<_TInvocable>, delegate> && std::constructible_from<invocable_type, _TInvocable>)
+   explicit delegate(_TInvocable&& invocable)
+   : base_type{ std::forward<_TInvocable>(invocable) }
    {
    }
 
