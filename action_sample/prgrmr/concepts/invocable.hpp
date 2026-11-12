@@ -14,7 +14,7 @@ namespace prgrmr::concepts::invocable
         ///   Extracts the invocable's result type, parameters and signature.
         /// </summary>
         ///
-        template<typename Invocable>
+        template<typename TInvocable>
         struct invocable_traits;
 
         ///
@@ -22,12 +22,12 @@ namespace prgrmr::concepts::invocable
         ///   Extracts the invocable's result type, parameters and signature.
         /// </summary>
         ///
-        template<typename Result, typename... Parameters>
-        struct invocable_traits<Result(Parameters...)>
+        template<typename TResult, typename... TParameters>
+        struct invocable_traits<TResult(TParameters...)>
         {
-            using result_type = Result;
-            using parameters_type = std::tuple<Parameters...>;
-            using signature_type = Result(Parameters...);
+            using result_type = TResult;
+            using parameters_type = std::tuple<TParameters...>;
+            using signature_type = TResult(TParameters...);
         };
 
         ///
@@ -35,50 +35,50 @@ namespace prgrmr::concepts::invocable
         ///   Extracts the invocable's result type and signature for a function pointer.
         /// </summary>
         ///
-        template<typename Result, typename... Parameters>
-        struct invocable_traits<Result(*)(Parameters...)> : invocable_traits<Result(Parameters...)> {};
+        template<typename TResult, typename... TParameters>
+        struct invocable_traits<TResult(*)(TParameters...)> : invocable_traits<TResult(TParameters...)> {};
 
         ///
         /// <summary>
         ///   Extracts the invocable's result type and signature for a std::function.
         /// </summary>
         ///
-        template<typename Result, typename... Parameters>
-        struct invocable_traits<std::function<Result(Parameters...)>> : invocable_traits<Result(Parameters...)> {};
+        template<typename TResult, typename... TParameters>
+        struct invocable_traits<std::function<TResult(TParameters...)>> : invocable_traits<TResult(TParameters...)> {};
 
         ///
         /// <summary>
         ///   Extracts the invocable's result type and signature for a non-const member function pointer.
         /// </summary>
         ///
-        template<typename Class, typename Result, typename... Parameters>
-        struct invocable_traits<Result(Class::*)(Parameters...)> : invocable_traits<Result(Parameters...)> {};
+        template<typename TClass, typename TResult, typename... TParameters>
+        struct invocable_traits<TResult(TClass::*)(TParameters...)> : invocable_traits<TResult(TParameters...)> {};
 
         ///
         /// <summary>
         ///   Extracts the invocable's result type and signature for a const member function pointer.
         /// </summary>
         ///
-        template<typename Class, typename Result, typename... Parameters>
-        struct invocable_traits<Result(Class::*)(Parameters...) const> : invocable_traits<Result(Parameters...)> {};
+        template<typename TClass, typename TResult, typename... TParameters>
+        struct invocable_traits<TResult(TClass::*)(TParameters...) const> : invocable_traits<TResult(TParameters...)> {};
 
         ///
         /// <summary>
         ///   Extracts the invocable's result type and signature for a functor or lambda by forwarding to its operator().
         /// </summary>
         ///
-        template<typename Class>
-        requires requires { &std::remove_reference_t<Class>::operator(); }
-        struct invocable_traits<Class> : invocable_traits<decltype(&std::remove_reference_t<Class>::operator())> {};
+        template<typename TClass>
+        requires requires { &std::remove_reference_t<TClass>::operator(); }
+        struct invocable_traits<TClass> : invocable_traits<decltype(&std::remove_reference_t<TClass>::operator())> {};
 
-        template<typename Invocable>
-        using invocable_result_type = typename invocable_traits<std::decay_t<Invocable>>::result_type;
+        template<typename TInvocable>
+        using invocable_result_type = typename invocable_traits<std::decay_t<TInvocable>>::result_type;
 
-        template<typename Invocable>
-        using invocable_parameters_type = typename invocable_traits<std::decay_t<Invocable>>::parameters_type;
+        template<typename TInvocable>
+        using invocable_parameters_type = typename invocable_traits<std::decay_t<TInvocable>>::parameters_type;
 
-        template<typename Invocable>
-        using invocable_signature_type = typename invocable_traits<std::decay_t<Invocable>>::signature_type;
+        template<typename TInvocable>
+        using invocable_signature_type = typename invocable_traits<std::decay_t<TInvocable>>::signature_type;
 
         ///
         /// <summary>
@@ -108,15 +108,15 @@ namespace prgrmr::concepts::invocable
             }
         }
 
-        template<typename... Invocables, typename... Parameters>
-        consteval std::size_t find_invocable_index(std::tuple<Parameters...>* = nullptr)
+        template<typename... Invocables, typename... TParameters>
+        consteval std::size_t find_invocable_index(std::tuple<TParameters...>* = nullptr)
         {
-            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, Parameters...> ? 1 : 0) + ...);
+            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, TParameters...> ? 1 : 0) + ...);
 
             static_assert(match_count > 0, "No matching function found for the provided arguments.");
             static_assert(match_count <= 1, "Ambiguous call: multiple matching functions found for the provided arguments.");
 
-            constexpr bool matches[] = { std::is_invocable_v<Invocables, Parameters...>... };
+            constexpr bool matches[] = { std::is_invocable_v<Invocables, TParameters...>... };
             constexpr std::size_t count = sizeof...(Invocables);
 
             for (std::size_t index = 0; index < count; ++index)
@@ -133,14 +133,48 @@ namespace prgrmr::concepts::invocable
         template<typename Parameters, typename... Invocables>
         struct find_invocable;
 
-        template<typename... Parameters, typename... Invocables>
-        struct find_invocable<std::tuple<Parameters...>, Invocables...>
+        template<typename... TParameters, typename... Invocables>
+        struct find_invocable<std::tuple<TParameters...>, Invocables...>
         {
             using type = std::tuple_element_t<
-                find_invocable_index<Invocables...>(static_cast<std::tuple<Parameters...>*>(nullptr)),
+                find_invocable_index<Invocables...>(static_cast<std::tuple<TParameters...>*>(nullptr)),
                 std::tuple<Invocables...>>;
         };
     }
+
+    ///
+    /// <summary>
+    ///   Deduce result type of an invocable.
+    /// </summary>
+    ///
+    template<typename TInvocable>
+    using invocable_result_type = detail::invocable_result_type<TInvocable>;
+
+    ///
+    /// <summary>
+    ///   Deduce an invocable's signature which is TResult(TParameters...)
+    /// </summary>
+    template<typename TInvocable>
+    using invocable_parameters_type = detail::invocable_parameters_type<TInvocable>;
+
+    ///
+    /// <summary>
+    ///   Deduce an invocable's signature which is TResult(TParameters...)
+    /// </summary>
+    template<typename TInvocable>
+    using invocable_signature_type = detail::invocable_signature_type<TInvocable>;
+
+    ///
+    /// <summary>
+    ///     Concept of an invocable that can be called with its deduced parameters.
+    /// </summary>
+    ///
+    template<typename TInvocable>
+    concept Invocable =
+        []<typename... TParameters>(std::type_identity<std::tuple<TParameters...>>)
+        {
+            return std::invocable<TInvocable, TParameters...>;
+        }(std::type_identity<invocable_parameters_type<TInvocable>>{});
 
     ///
     /// <summary>
@@ -149,21 +183,6 @@ namespace prgrmr::concepts::invocable
     ///
     template<typename Parameters, typename... Invocables>
     using find_invocable_type = typename detail::find_invocable<Parameters, Invocables...>::type;
-
-    ///
-    /// <summary>
-    ///   Deduce result type of an invocable.
-    /// </summary>
-    ///
-    template<typename Invocable>
-    using invocable_result_type = detail::invocable_result_type<Invocable>;
-
-    ///
-    /// <summary>
-    ///   Deduce an invocable's signature which is Result(Parameters...)
-    /// </summary>
-    template<typename Invocable>
-    using invocable_signature_type = detail::invocable_signature_type<Invocable>;
 
     ///
     /// <summary>
@@ -189,14 +208,14 @@ namespace prgrmr::concepts::invocable
     ///
     template<typename... Invocables>
     concept IsSameResultType = (sizeof...(Invocables) <= 1) ||
-        []<typename Invocable, typename... RemaingInvocables>(std::type_identity<Invocable>, std::type_identity<RemaingInvocables>...)
+        []<typename TInvocable, typename... RemaingInvocables>(std::type_identity<TInvocable>, std::type_identity<RemaingInvocables>...)
         {
-            return (std::is_same_v<invocable_result_type<Invocable>, invocable_result_type<RemaingInvocables>> && ...);
+            return (std::is_same_v<invocable_result_type<TInvocable>, invocable_result_type<RemaingInvocables>> && ...);
         }(std::type_identity<Invocables>{}...);
 
     ///
     /// <summary>
-    ///   Verify that each invocable in the series has a unique signature -> Result(Parameters...).
+    ///   Verify that each invocable in the series has a unique signature -> TResult(TParameters...).
     /// </summary>
     ///
     template<typename... Invocables>
@@ -211,9 +230,9 @@ namespace prgrmr::concepts::invocable
     template<typename Parameters, typename... Invocables>
     struct are_invocables_parameters_unique : std::false_type {};
 
-    template<typename... Parameters, typename... Invocables>
-    struct are_invocables_parameters_unique<std::tuple<Parameters...>, Invocables...>
-         : std::bool_constant<((std::is_invocable_v<Invocables, Parameters...> ? 1 : 0) + ...) == 1> {};
+    template<typename... TParameters, typename... Invocables>
+    struct are_invocables_parameters_unique<std::tuple<TParameters...>, Invocables...>
+         : std::bool_constant<((std::is_invocable_v<Invocables, TParameters...> ? 1 : 0) + ...) == 1> {};
 
     template<typename Parameters, typename... Invocables>
     concept AreInvocablesParametersUnique = are_invocables_parameters_unique<Parameters, Invocables...>::value;
@@ -223,19 +242,10 @@ namespace prgrmr::concepts::invocable
     ///     Concept of an invocable that supports nullability.
     /// </summary>
     ///
-    template<typename InvocableT, typename... Parameters>
-    concept Invocable =
-        std::invocable<InvocableT, Parameters...>;
-
-    ///
-    /// <summary>
-    ///     Concept of an invocable that supports nullability.
-    /// </summary>
-    ///
-    template<typename InvocableT, typename... Parameters>
+    template<typename TInvocable>
     concept InvocableNullable =
-        Invocable<InvocableT, Parameters...> &&
-        requires(const std::remove_reference_t<InvocableT>& invocable)
+        Invocable<TInvocable> &&
+        requires(const std::remove_reference_t<TInvocable>& invocable)
         {
             static_cast<bool>(invocable);
         };
@@ -245,28 +255,28 @@ namespace prgrmr::concepts::invocable
     ///     Concept of invocable with a void result.
     /// </summary>
     ///
-    template<typename InvocableT, typename... Parameters>
+    template<typename TInvocable>
     concept InvocableVoidResult =
-        Invocable<InvocableT, Parameters...> &&
-        std::is_void_v<invocable_result_type<InvocableT>>;
+        Invocable<TInvocable> &&
+        std::is_void_v<invocable_result_type<TInvocable>>;
 
     ///
     /// <summary>
     ///     Concept of invocable with a result (non-void).
     /// </summary>
     ///
-    template<typename InvocableT, typename... Parameters>
+    template<typename TInvocable>
     concept InvocableWithResult =
-        Invocable<InvocableT, Parameters...> &&
-        !InvocableVoidResult<InvocableT, Parameters...>;
+        Invocable<TInvocable> &&
+        !InvocableVoidResult<TInvocable>;
 
     ///
     /// <summary>
     ///     Concept of an invocable that is both nullable with a result (non-void).
     /// </summary>
     ///
-    template<typename Invocable, typename... Parameters>
+    template<typename TInvocable>
     concept InvocableNullableWithResult =
-        InvocableNullable<Invocable, Parameters...> &&
-        InvocableWithResult<Invocable, Parameters...>;
+        InvocableNullable<TInvocable> &&
+        InvocableWithResult<TInvocable>;
 }

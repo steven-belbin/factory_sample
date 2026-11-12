@@ -21,7 +21,7 @@ namespace prgrmr
 /// </returns>
 ///
 template<class... args_t>
-auto apply_optional(concepts::invocable::InvocableNullableWithResult<const args_t&...> auto&& invocable,
+auto apply_optional(concepts::invocable::InvocableNullableWithResult auto&& invocable,
                     const std::tuple<args_t...>& args)
 {
    return (invocable)
@@ -43,7 +43,7 @@ auto apply_optional(concepts::invocable::InvocableNullableWithResult<const args_
 /// </returns>
 ///
 template<class... args_t>
-auto invoke_optional(concepts::invocable::InvocableNullableWithResult<const args_t&...> auto&& invocable,
+auto invoke_optional(concepts::invocable::InvocableNullableWithResult auto&& invocable,
                      const args_t&... args)
 {
    return (invocable)

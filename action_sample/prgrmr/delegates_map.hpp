@@ -263,7 +263,7 @@ public:
    /// <seealso cref="delegate::invoke_optional" />
    ///
    template<class function_t, class... args_t>
-   requires concepts::invocable::InvocableWithResult<function_t, args_t...>
+   requires concepts::invocable::InvocableWithResult<function_t>
    auto invoke_optional(const key_type& key,
                         args_t&&... args) const
    {

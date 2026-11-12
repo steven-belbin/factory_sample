@@ -248,7 +248,7 @@ public:
    /// <seealso cref="prgrmr::invoke_optional"/>
    ///
    template<class function_t, class... args_t>
-   requires concepts::invocable::InvocableWithResult<function_t, args_t...>
+   requires concepts::invocable::InvocableWithResult<function_t>
    auto invoke_optional(args_t&&... args) const
    {
       return prgrmr::invoke_optional(get_function<function_t>(),
