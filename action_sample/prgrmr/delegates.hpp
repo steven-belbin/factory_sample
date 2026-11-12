@@ -23,15 +23,12 @@ public:
    static_assert(concepts::invocable::IsSameResultType<functions_t...>,
                  "The argument list contains at least one function doesn't return the same type.");
 
-   static_assert(concepts::invocable::IsDifferentSignatures<functions_t...>,
+   static_assert(concepts::invocable::AreInvocablesSignaturesUnique<functions_t...>,
                  "The argument list contains at least one pair of functions having the same signature.");
 
-   using functions_type = concepts::invocable::invocables_tuple_t<functions_t...>;
+   using functions_type = concepts::invocable::invocables_type<functions_t...>;
 
-   template<typename function_t>
-   using stored_type = std::decay_t<function_t>;
-
-   using result_type = concepts::invocable::invocables_result_t<functions_t...>;
+   using result_type = concepts::invocable::invocables_result_type<functions_t...>;
 
    delegates() = default;
    delegates(const delegates&) = default;
@@ -112,7 +109,7 @@ public:
    template<class function_t>
    auto get_function() const
    {
-      return std::get<stored_type<function_t>>(_functions);
+      return std::get<std::decay_t<function_t>>(_functions);
    }
 
    ///
@@ -140,7 +137,7 @@ public:
    template<class function_t>
    void register_function(function_t&& function)
    {
-      std::get<stored_type<function_t>>(_functions) = std::forward<function_t>(function);
+      std::get<std::decay_t<function_t>>(_functions) = std::forward<function_t>(function);
    }
 
    ///
@@ -153,7 +150,7 @@ public:
    template<class function_t>
    void register_fn(const std::function<function_t>& function)
    {
-      std::get<stored_type<function_t>>(_functions) = function;
+      std::get<std::function<function_t>>(_functions) = function;
    }
 
    ///
@@ -179,7 +176,7 @@ public:
    template<class function_t>
    void unregister_function()
    {
-      std::get<stored_type<function_t>>(_functions) = nullptr;
+      std::get<std::decay_t<function_t>>(_functions) = nullptr;
    }
 
    ///
@@ -216,7 +213,7 @@ public:
    template<class... args_t>
    auto invoke(args_t&&... args)
    {
-       using function_t = concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
 
        return invoke<function_t>(std::forward<args_t>(args)...);
    }
@@ -275,7 +272,7 @@ public:
    template<class... args_t>
    auto invoke_optional(args_t&&... args) const
    {
-       using function_t = concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
 
        return invoke_optional<function_t>(std::forward<args_t>(args)...);
    }

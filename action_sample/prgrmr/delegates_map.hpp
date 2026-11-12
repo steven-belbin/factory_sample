@@ -289,7 +289,7 @@ public:
    auto invoke_optional(const key_type& key,
                         args_t&&... args) const
    {
-       using function_t = concepts::invocable::find_invocable_t<std::tuple<args_t...>, functions_t...>;
+       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
 
        return invoke_optional<function_t>(key, std::forward<args_t>(args)...);
    }

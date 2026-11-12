@@ -10,7 +10,7 @@ template<typename ... Invocables>
 inline constexpr void static_assert_invocable_concepts()
 {
     static_assert(concepts::arguments::IsNotEmpty<Invocables...>, "The list of invocables cannot be empty.");
-    static_assert(concepts::invocable::IsDifferentSignatures<Invocables...>, "The list of invocables contains at least one pair that have the same signature.");
+    static_assert(concepts::invocable::AreInvocablesSignaturesUnique<Invocables...>, "The list of invocables contains at least one pair that have the same signature.");
     static_assert(concepts::invocable::IsSameResultType<Invocables...>, "The list of invocables contains at least one entry whose result type is different from the rest.");
 }
 

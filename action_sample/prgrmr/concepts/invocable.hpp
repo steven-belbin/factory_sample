@@ -9,50 +9,84 @@ namespace prgrmr::concepts::invocable
 {
     namespace detail
     {
-        // Extracts the signature and return type of an invocable type
-        template<typename Function>
-        struct function_traits;
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type, parameters and signature.
+        /// </summary>
+        ///
+        template<typename Invocable>
+        struct invocable_traits;
 
-        // Function type
-        template<typename Return, typename... Parameters>
-        struct function_traits<Return(Parameters...)>
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type, parameters and signature.
+        /// </summary>
+        ///
+        template<typename Result, typename... Parameters>
+        struct invocable_traits<Result(Parameters...)>
         {
-            using return_type = Return;
-            using signature_type = Return(Parameters...);
+            using result_type = Result;
+            using parameters_type = std::tuple<Parameters...>;
+            using signature_type = Result(Parameters...);
         };
 
-        // Function pointer
-        template<typename Return, typename... Parameters>
-        struct function_traits<Return(*)(Parameters...)> : function_traits<Return(Parameters...)> {};
-
-        // std::function
-        template<typename Return, typename... Parameters>
-        struct function_traits<std::function<Return(Parameters...)>> : function_traits<Return(Parameters...)> {};
-
-        // Member function pointer (non-const)
-        template<typename Class, typename Return, typename... Parameters>
-        struct function_traits<Return(Class::*)(Parameters...)> : function_traits<Return(Parameters...)> {};
-
-        // Member function pointer (const)
-        template<typename Class, typename Return, typename... Parameters>
-        struct function_traits<Return(Class::*)(Parameters...) const> : function_traits<Return(Parameters...)> {};
-
-        // Functor / lambda: forward to operator()
-        template<typename T>
-        requires requires { &std::remove_reference_t<T>::operator(); }
-        struct function_traits<T> : function_traits<decltype(&std::remove_reference_t<T>::operator())> {};
-
-        template<typename Function>
-        using invoke_return_t = typename function_traits<std::decay_t<Function>>::return_type;
-
-        template<typename Function>
-        using invoke_signature_t = typename function_traits<std::decay_t<Function>>::signature_type;
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type and signature for a function pointer.
+        /// </summary>
+        ///
+        template<typename Result, typename... Parameters>
+        struct invocable_traits<Result(*)(Parameters...)> : invocable_traits<Result(Parameters...)> {};
 
         ///
-        /// Checks that all signatures within a pack are unique.
+        /// <summary>
+        ///   Extracts the invocable's result type and signature for a std::function.
+        /// </summary>
+        ///
+        template<typename Result, typename... Parameters>
+        struct invocable_traits<std::function<Result(Parameters...)>> : invocable_traits<Result(Parameters...)> {};
+
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type and signature for a non-const member function pointer.
+        /// </summary>
+        ///
+        template<typename Class, typename Result, typename... Parameters>
+        struct invocable_traits<Result(Class::*)(Parameters...)> : invocable_traits<Result(Parameters...)> {};
+
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type and signature for a const member function pointer.
+        /// </summary>
+        ///
+        template<typename Class, typename Result, typename... Parameters>
+        struct invocable_traits<Result(Class::*)(Parameters...) const> : invocable_traits<Result(Parameters...)> {};
+
+        ///
+        /// <summary>
+        ///   Extracts the invocable's result type and signature for a functor or lambda by forwarding to its operator().
+        /// </summary>
+        ///
+        template<typename Class>
+        requires requires { &std::remove_reference_t<Class>::operator(); }
+        struct invocable_traits<Class> : invocable_traits<decltype(&std::remove_reference_t<Class>::operator())> {};
+
+        template<typename Invocable>
+        using invocable_result_type = typename invocable_traits<std::decay_t<Invocable>>::result_type;
+
+        template<typename Invocable>
+        using invocable_parameters_type = typename invocable_traits<std::decay_t<Invocable>>::parameters_type;
+
+        template<typename Invocable>
+        using invocable_signature_type = typename invocable_traits<std::decay_t<Invocable>>::signature_type;
+
+        ///
+        /// <summary>
+        ///   Checks that all signatures are unique.
+        /// </summary>
         ///
         template<typename... Signatures>
-        consteval bool are_unique_signatures()
+        consteval bool are_invocables_signatures_unique()
         {
             if constexpr (sizeof...(Signatures) <= 1)
             {
@@ -60,141 +94,179 @@ namespace prgrmr::concepts::invocable
             }
             else
             {
-                return []<typename T, typename... Rest>(std::type_identity<T>, std::type_identity<Rest>...)
+                return []<typename Signature, typename... RemainingSignatures>(std::type_identity<Signature>, std::type_identity<RemainingSignatures>...)
                 {
-                    if constexpr ((std::is_same_v<T, Rest> || ...))
+                    if constexpr ((std::is_same_v<Signature, RemainingSignatures> || ...))
                     {
                         return false;
                     }
                     else
                     {
-                        return are_unique_signatures<Rest...>();
+                        return are_invocables_signatures_unique<RemainingSignatures...>();
                     }
                 }(std::type_identity<Signatures>{}...);
             }
         }
 
-        template<typename... Invocables, typename... Args>
-        consteval std::size_t find_invocable_index(std::tuple<Args...>* = nullptr)
+        template<typename... Invocables, typename... Parameters>
+        consteval std::size_t find_invocable_index(std::tuple<Parameters...>* = nullptr)
         {
-            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, Args...> ? 1 : 0) + ...);
+            constexpr std::size_t match_count = ((std::is_invocable_v<Invocables, Parameters...> ? 1 : 0) + ...);
 
             static_assert(match_count > 0, "No matching function found for the provided arguments.");
             static_assert(match_count <= 1, "Ambiguous call: multiple matching functions found for the provided arguments.");
 
-            constexpr bool matches[] = { std::is_invocable_v<Invocables, Args...>... };
-            constexpr std::size_t total = sizeof...(Invocables);
+            constexpr bool matches[] = { std::is_invocable_v<Invocables, Parameters...>... };
+            constexpr std::size_t count = sizeof...(Invocables);
 
-            for (std::size_t i = 0; i < total; ++i)
+            for (std::size_t index = 0; index < count; ++index)
             {
-                if (matches[i])
+                if (matches[index])
                 {
-                    return i;
+                    return index;
                 }
             }
 
             return 0;
         }
 
-        template<typename ArgsTuple, typename... Invocables>
+        template<typename Parameters, typename... Invocables>
         struct find_invocable;
 
-        template<typename... Args, typename... Invocables>
-        struct find_invocable<std::tuple<Args...>, Invocables...>
+        template<typename... Parameters, typename... Invocables>
+        struct find_invocable<std::tuple<Parameters...>, Invocables...>
         {
             using type = std::tuple_element_t<
-                find_invocable_index<Invocables...>(static_cast<std::tuple<Args...>*>(nullptr)),
+                find_invocable_index<Invocables...>(static_cast<std::tuple<Parameters...>*>(nullptr)),
                 std::tuple<Invocables...>>;
         };
     }
 
     ///
-    /// Deduce the invocable type from a pack that matches the given argument types tuple.
+    /// <summary>
+    ///   Deduce the invocable based on its parameters from the series of invocables.
+    /// </summary>
     ///
-    template<typename ArgsTuple, typename... Invocables>
-    using find_invocable_t = typename detail::find_invocable<ArgsTuple, Invocables...>::type;
+    template<typename Parameters, typename... Invocables>
+    using find_invocable_type = typename detail::find_invocable<Parameters, Invocables...>::type;
 
     ///
-    /// Deduce return type of an invocable.
+    /// <summary>
+    ///   Deduce result type of an invocable.
+    /// </summary>
     ///
-    template<typename Function>
-    using invocable_return_t = detail::invoke_return_t<Function>;
+    template<typename Invocable>
+    using invocable_result_type = detail::invocable_result_type<Invocable>;
 
     ///
-    /// Deduce canonical signature type of an invocable: Return(Parameters...)
-    ///
-    template<typename Function>
-    using invocable_signature_t = detail::invoke_signature_t<Function>;
+    /// <summary>
+    ///   Deduce an invocable's signature which is Result(Parameters...)
+    /// </summary>
+    template<typename Invocable>
+    using invocable_signature_type = detail::invocable_signature_type<Invocable>;
 
     ///
-    /// Tuple of decayed invocable types.
+    /// <summary>
+    ///   A series of invocables.
+    /// </summary>
     ///
     template<typename... Invocables>
-    using invocables_tuple_t = std::tuple<std::decay_t<Invocables>...>;
+    using invocables_type = std::tuple<std::decay_t<Invocables>...>;
 
     ///
-    /// Common result type of the invocables pack (taken from the first).
+    /// <summary>
+    ///   The invocables common result type (taken from the first).
+    /// </summary>
     ///
     template<typename... Invocables>
     requires (sizeof...(Invocables) > 0)
-    using invocables_result_t = invocable_return_t<std::tuple_element_t<0, std::tuple<Invocables...>>>;
+    using invocables_result_type = invocable_result_type<std::tuple_element_t<0, std::tuple<Invocables...>>>;
 
     ///
-    /// Concept to enforce that all invocables in the pack return the same type.
+    /// <summary>
+    ///   Verify that all invocables in the series have the same result type.
+    /// </summary>
     ///
     template<typename... Invocables>
     concept IsSameResultType = (sizeof...(Invocables) <= 1) ||
-        []<typename First, typename... Rest>(std::type_identity<First>, std::type_identity<Rest>...)
+        []<typename Invocable, typename... RemaingInvocables>(std::type_identity<Invocable>, std::type_identity<RemaingInvocables>...)
         {
-            return (std::is_same_v<detail::invoke_return_t<First>, detail::invoke_return_t<Rest>> && ...);
+            return (std::is_same_v<invocable_result_type<Invocable>, invocable_result_type<RemaingInvocables>> && ...);
         }(std::type_identity<Invocables>{}...);
 
+    ///
+    /// <summary>
+    ///   Verify that each invocable in the series has a unique signature -> Result(Parameters...).
+    /// </summary>
+    ///
     template<typename... Invocables>
-    concept IsSameReturn = IsSameResultType<Invocables...>;
+    concept AreInvocablesSignaturesUnique = detail::are_invocables_signatures_unique<detail::invocable_signature_type<Invocables>...>();
 
     ///
-    /// Concept to enforce that all invocables have distinct canonical signatures (parameters + return).
     ///
-    template<typename... Invocables>
-    concept IsDifferentSignatures = detail::are_unique_signatures<detail::invoke_signature_t<Invocables>...>();
+    /// <summary>
+    ///   Verify that each invocable in the series has different parameters.
+    /// </summary>
+    ///
+    template<typename Parameters, typename... Invocables>
+    struct are_invocables_parameters_unique : std::false_type {};
+
+    template<typename... Parameters, typename... Invocables>
+    struct are_invocables_parameters_unique<std::tuple<Parameters...>, Invocables...>
+         : std::bool_constant<((std::is_invocable_v<Invocables, Parameters...> ? 1 : 0) + ...) == 1> {};
+
+    template<typename Parameters, typename... Invocables>
+    concept AreInvocablesParametersUnique = are_invocables_parameters_unique<Parameters, Invocables...>::value;
 
     ///
-    /// Concept to enforce that exactly one invocable matches the given argument types.
+    /// <summary>
+    ///     Concept of an invocable that supports nullability.
+    /// </summary>
     ///
-    template<typename ArgsTuple, typename... Invocables>
-    struct is_unique_invocable : std::false_type {};
-
-    template<typename... Args, typename... Invocables>
-    struct is_unique_invocable<std::tuple<Args...>, Invocables...>
-        : std::bool_constant<((std::is_invocable_v<Invocables, Args...> ? 1 : 0) + ...) == 1> {};
-
-    template<typename ArgsTuple, typename... Invocables>
-    concept IsUniqueInvocable = is_unique_invocable<ArgsTuple, Invocables...>::value;
+    template<typename InvocableT, typename... Parameters>
+    concept Invocable =
+        std::invocable<InvocableT, Parameters...>;
 
     ///
-    /// Concept to enforce that an invocable can be tested for emptiness / nullability.
+    /// <summary>
+    ///     Concept of an invocable that supports nullability.
+    /// </summary>
     ///
-    template<typename F, typename... Args>
+    template<typename InvocableT, typename... Parameters>
     concept InvocableNullable =
-        std::invocable<F, Args...> &&
-        requires(const std::remove_reference_t<F>& f)
+        Invocable<InvocableT, Parameters...> &&
+        requires(const std::remove_reference_t<InvocableT>& invocable)
         {
-            static_cast<bool>(f);
+            static_cast<bool>(invocable);
         };
 
     ///
-    /// Concept to enforce that an invocable returns a result (non-void).
+    /// <summary>
+    ///     Concept of invocable with a void result.
+    /// </summary>
     ///
-    template<typename F, typename... Args>
-    concept InvocableWithResult =
-        std::invocable<F, Args...> &&
-        !std::is_void_v<std::invoke_result_t<F, Args...>>;
+    template<typename InvocableT, typename... Parameters>
+    concept InvocableVoidResult =
+        Invocable<InvocableT, Parameters...> &&
+        std::is_void_v<invocable_result_type<InvocableT>>;
 
     ///
-    /// Concept to enforce that an invocable is both nullable and returns a result (non-void).
+    /// <summary>
+    ///     Concept of invocable with a result (non-void).
+    /// </summary>
     ///
-    template<typename F, typename... Args>
+    template<typename InvocableT, typename... Parameters>
+    concept InvocableWithResult =
+        Invocable<InvocableT, Parameters...> &&
+        !InvocableVoidResult<InvocableT, Parameters...>;
+
+    ///
+    /// <summary>
+    ///     Concept of an invocable that is both nullable with a result (non-void).
+    /// </summary>
+    ///
+    template<typename Invocable, typename... Parameters>
     concept InvocableNullableWithResult =
-        InvocableNullable<F, Args...> &&
-        InvocableWithResult<F, Args...>;
+        InvocableNullable<Invocable, Parameters...> &&
+        InvocableWithResult<Invocable, Parameters...>;
 }
