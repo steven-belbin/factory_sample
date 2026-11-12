@@ -51,4 +51,12 @@ namespace prgrmr::concepts::arguments
     ///
     template<typename ... TArguments>
     concept IsPair = IsCountEqual<2, TArguments...>;
+
+    ///
+    /// <summary>
+    ///   Verifies if that templated arguments has at most the specified count.
+    /// </summary>
+    ///
+    template<std::size_t TCount, typename ... TArguments>
+    concept IsAtMost = (sizeof...(TArguments) <= TCount);
 }
