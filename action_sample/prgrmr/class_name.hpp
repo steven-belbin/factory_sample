@@ -5,10 +5,10 @@
 
 namespace prgrmr
 {
-template<class T>
+template<class TClass>
 constexpr auto class_name()
 {
-    const std::string_view name = typeid(T).name();
+    const std::string_view name = typeid(TClass).name();
 
     const auto pos = name.find_last_of(' ');
 
@@ -18,10 +18,10 @@ constexpr auto class_name()
     return name.substr(pos + 1);
 }
 
-template<class T>
-constexpr auto class_name(const T&)
+template<class TClass>
+constexpr auto class_name(const TClass&)
 {
-    return class_name<T>();
+    return class_name<TClass>();
 }
 
 }

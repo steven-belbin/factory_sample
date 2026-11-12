@@ -1,3 +1,4 @@
+#include <prgrmr/delegate.hpp>
 #include <prgrmr/delegates.hpp>
 #include <prgrmr/delegates_map.hpp>
 #include <prgrmr/concepts/concepts.hpp>
@@ -77,6 +78,24 @@ int main()
     assert(delegates_map.invoke_optional("active", std::string("abc")) == 3);
     assert(delegates_map.invoke_optional<0>("active", 5) == 10);
     assert(delegates_map.invoke_optional<1>("active", "abc") == 3);
+
+    // Test delegate reset and invoke_optional
+    delegate<test_fn1> single_delegate;
+    assert(single_delegate.invoke_optional(5) == std::nullopt);
+
+    single_delegate.reset([](int v) { return v * 3; });
+    assert(single_delegate.invoke_optional(5) == 15);
+
+    single_delegate.reset();
+    assert(single_delegate.invoke_optional(5) == std::nullopt);
+
+    single_delegate.reset([](int v) { return v * 4; });
+    assert(single_delegate.invoke_optional(5) == 20);
+    assert(single_delegate.invoke(5) == 20);
+    assert(single_delegate(5) == 20);
+
+    single_delegate.reset(nullptr);
+    assert(single_delegate.invoke_optional(5) == std::nullopt);
 
     std::cout << "All invoke_optional assertions passed successfully!\n";
 
