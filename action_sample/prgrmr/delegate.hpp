@@ -9,8 +9,21 @@ namespace prgrmr
 {
 ///
 /// <summary>
-///   Contains an invocable that references an invocable or not at runtime.
+///   A delegate can be assigned to an invocable or be in an empty state.
+///   Its state can change during runtime.
+///
+///   It's capable of an optional invocation which returns its result wrapped in std::optional.
+///   When it's in an empty state, then `std::nullopt` is returned.
 /// </summary>
+///
+/// <remarks>
+///   To distingush from a regular function pointer or std::function, a delegate explicitly
+///   supports the delegate to be an empty state forcing clients to verify for the presence
+///   of a result type after invocation of the delegates member function.
+///
+///   A pitfall of always returning an `std::optional<result_type>` the client code is
+///   responsibillty to explicitly handle invocations when the delegate is its empty state.
+/// </remarks>
 ///
 template<typename TInvocable,
          typename TParametersTuple = concepts::invocable::invocable_parameters_type<TInvocable>>
@@ -20,11 +33,16 @@ template<typename TInvocable, typename... TParameters>
 class delegate<TInvocable, std::tuple<TParameters...>> final
 {
 public:
-   using signature_type = concepts::invocable::invocable_signature_type<TInvocable>;
-   using invocable_type = std::function<signature_type>;
-   using parameters_type = concepts::invocable::invocable_parameters_type<TInvocable>;
-   using result_type = concepts::invocable::invocable_result_type<TInvocable>;
+   using traits = concepts::invocable::invocable_traits<TInvocable>;
+   using signature_type = traits::signature_type;
+   using parameters_type = traits::parameters_type;
+   using result_type = traits::result_type;
 
+private:
+   using function_type = std::function<signature_type>;
+   function_type _function;
+
+public:
    delegate() = default;
    delegate(const delegate&) = delete;
    delegate(delegate&&) = default;
@@ -36,54 +54,40 @@ public:
 
    ///
    /// <summary>
-   ///   Construct and registers to an invocable.
+   ///   Construct and assigns an invocable.
    /// </summary>
    ///
    /// <param name="invocable">An invocable.</param>
    ///
    template<typename TOtherInvocable>
-   requires (!std::is_same_v<std::remove_cvref_t<TOtherInvocable>, delegate> && std::constructible_from<invocable_type, TOtherInvocable>)
+   requires (!std::is_same_v<std::remove_cvref_t<TOtherInvocable>, delegate> && std::constructible_from<function_type, TOtherInvocable>)
    explicit delegate(TOtherInvocable&& invocable)
-   : _invocable{ std::forward<TOtherInvocable>(invocable) }
+   : _function{ std::forward<TOtherInvocable>(invocable) }
    {
    }
 
    ///
    /// <summary>
-   ///   Get the invocable.
-   /// </summary>
-   ///
-   /// <returns>A reference to the registered invocable.</returns>
-   ///
-   /// <remarks>When no invocable has been registered, then reference will be an empty invocable <--> nullptr.</remarks>
-   ///
-   const auto& invocable() const
-   {
-      return _invocable;
-   }
-
-   ///
-   /// <summary>
-   ///   Resets the registered invocable to nullptr.
+   ///   Resets the invocable to its empty state.
    /// </summary>
    ///
    void reset(std::nullptr_t = nullptr)
    {
-      _invocable = nullptr;
+      _function = nullptr;
    }
 
    ///
    /// <summary>
-   ///   Registers or replaces the invocable.
+   ///   Resets the invocable to another invocable.
    /// </summary>
    ///
    /// <param name="invocable">The invocable to register.</param>
    ///
    template<typename TOtherInvocable>
-   requires std::constructible_from<invocable_type, TOtherInvocable>
+   requires std::constructible_from<function_type, TOtherInvocable>
    void reset(TOtherInvocable&& invocable)
    {
-      _invocable = std::forward<TOtherInvocable>(invocable);
+      _function = std::forward<TOtherInvocable>(invocable);
    }
 
    ///
@@ -95,7 +99,7 @@ public:
    ///
    auto invoke(TParameters... parameters) const
    {
-      return _invocable(std::forward<TParameters>(parameters)...);
+      return _function(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -126,7 +130,7 @@ public:
    ///
    auto invoke_optional(TParameters... parameters) const
    {
-      return prgrmr::invoke_optional(_invocable, std::forward<TParameters>(parameters)...);
+      return prgrmr::invoke_optional(_function, std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -138,27 +142,12 @@ public:
    ///
    void swap(delegate& other)
    {
-      _invocable.swap(other._invocable);
+      _function.swap(other._function);
    }
 
    ///
    /// <summary>
-   ///   Assigns the invocable from another invocable.
-   /// </summary>
-   ///
-   /// <param name="other">The invocable to assign from.</param>
-   ///
-   template<typename TOtherInvocable>
-   requires std::constructible_from<invocable_type, TOtherInvocable>
-   auto& operator=(TOtherInvocable&& invocable) noexcept
-   {
-      reset(std::forward<TOtherInvocable>(invocable));
-      return *this;
-   }
-
-   ///
-   /// <summary>
-   ///   Unregisters the invocable.
+   ///   Assign the delegate to its empty state.
    /// </summary>
    ///
    auto& operator=(const std::nullptr_t)
@@ -169,25 +158,27 @@ public:
 
    ///
    /// <summary>
-   ///  Checks whether an invocable is registered.
+   ///   Assign an invocable.
    /// </summary>
    ///
-   operator bool() const noexcept
+   /// <param name="other">The invocable.</param>
+   ///
+   template<typename TOtherInvocable>
+   requires std::constructible_from<function_type, TOtherInvocable>
+   auto& operator=(TOtherInvocable&& invocable) noexcept
    {
-      return static_cast<bool>(_invocable);
+      reset(std::forward<TOtherInvocable>(invocable));
+      return *this;
    }
 
    ///
    /// <summary>
-   ///  Checks whether an invocable is not registered.
+   ///  Checks if the delegate has an invocable assigned.
    /// </summary>
    ///
-   auto operator!() const noexcept
+   operator bool() const noexcept
    {
-      return !this->operator bool();
+      return _function.operator bool();
    }
-
-private:
-   invocable_type _invocable;
 };
 }

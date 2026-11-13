@@ -149,27 +149,30 @@ namespace detail
     };
 }
 
+template<typename TInvocable>
+using invocable_traits = detail::invocable_traits<TInvocable>;
+
 ///
 /// <summary>
 ///   Deduce result type of an invocable.
 /// </summary>
 ///
 template<typename TInvocable>
-using invocable_result_type = detail::invocable_result_type<TInvocable>;
+using invocable_result_type = invocable_traits<TInvocable>::result_type;
 
 ///
 /// <summary>
 ///   Deduce an invocable's signature which is TResult(TParameters...)
 /// </summary>
 template<typename TInvocable>
-using invocable_parameters_type = detail::invocable_parameters_type<TInvocable>;
+using invocable_parameters_type = invocable_traits<TInvocable>::parameters_type;
 
 ///
 /// <summary>
 ///   Deduce an invocable's signature which is TResult(TParameters...)
 /// </summary>
 template<typename TInvocable>
-using invocable_signature_type = detail::invocable_signature_type<TInvocable>;
+using invocable_signature_type = invocable_traits<TInvocable>::signature_type;
 
 ///
 /// <summary>
