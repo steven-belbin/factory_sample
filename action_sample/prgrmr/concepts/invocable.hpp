@@ -147,6 +147,32 @@ namespace detail
             find_invocable_index<TInvocables...>(static_cast<std::tuple<TParameters...>*>(nullptr)),
             std::tuple<TInvocables...>>;
     };
+
+    ///
+    /// <summary>
+    ///   Finds the index of the invocable matching the target type or signature.
+    /// </summary>
+    ///
+    template<typename TTarget, typename... TInvocables>
+    consteval std::size_t find_delegate_index()
+    {
+        constexpr bool matches[] = {
+            (std::same_as<TTarget, TInvocables> ||
+             std::same_as<invocable_signature_type<TTarget>,
+                          invocable_signature_type<TInvocables>>)...
+        };
+        constexpr std::size_t count = sizeof...(TInvocables);
+
+        for (std::size_t index = 0; index < count; ++index)
+        {
+            if (matches[index])
+            {
+                return index;
+            }
+        }
+
+        return count;
+    }
 }
 
 template<typename TInvocable>
@@ -188,6 +214,14 @@ concept Invocable =
 
 ///
 /// <summary>
+///     Verifies that an invocable can be called with the given parameters.
+/// </summary>
+///
+template<typename TInvocable, typename... TParameters>
+concept CanInvoke = std::invocable<TInvocable, TParameters...>;
+
+///
+/// <summary>
 ///   A series of invocables.
 /// </summary>
 ///
@@ -201,6 +235,17 @@ using invocables_type = typename detail::invocables_type<TInvocables...>;
 ///
 template<typename TParameters, typename... TInvocables>
 using find_invocable_type = typename detail::find_invocable<TParameters, TInvocables...>::type;
+
+///
+/// <summary>
+///   Finds the index of the invocable matching the target type or signature.
+/// </summary>
+///
+template<typename TTarget, typename... TInvocables>
+consteval std::size_t find_delegate_index()
+{
+    return detail::find_delegate_index<TTarget, TInvocables...>();
+}
 
 ///
 /// <summary>
@@ -256,6 +301,27 @@ struct are_invocables_parameters_unique<std::tuple<TParameters...>, TInvocables.
 template<typename TParameters, typename... TInvocables>
 concept AreInvocablesParametersUnique =
     are_invocables_parameters_unique<TParameters, TInvocables...>::value;
+
+///
+/// <summary>
+///   Verify that the provided parameters can invoke at least one invocable in the series.
+/// </summary>
+///
+template<typename TParameters, typename... TInvocables>
+struct can_invoke_any : std::false_type {};
+
+///
+/// <summary>
+///   Verify that the provided parameters can invoke at least one invocable in the series.
+/// </summary>
+///
+template<typename... TParameters, typename... TInvocables>
+struct can_invoke_any<std::tuple<TParameters...>, TInvocables...>
+     : std::bool_constant<(std::is_invocable_v<TInvocables, TParameters...> || ...)> {};
+
+template<typename TParameters, typename... TInvocables>
+concept CanInvokeAny =
+    can_invoke_any<TParameters, TInvocables...>::value;
 
 ///
 /// <summary>

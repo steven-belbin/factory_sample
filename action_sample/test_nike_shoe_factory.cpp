@@ -53,7 +53,7 @@ void test_factory(nike::shoe_factory& factory,
    test_constructors(factory, key);
 
    std::cout << "\nUnregistered all constructors for this key. From this points onwards nothing shall be constructed with this key.\n";
-   factory.unregister_delegate(key);
+   factory.reset(key);
 
    test_constructors(factory, key);
 

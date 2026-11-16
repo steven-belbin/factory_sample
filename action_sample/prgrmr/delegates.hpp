@@ -1,11 +1,12 @@
 #pragma once
 
-#include "./functional.hpp"
+#include "./delegate.hpp"
 #include "./concepts/arguments.hpp"
 #include "./concepts/invocable.hpp"
-#include <functional>
+#include <concepts>
+#include <cstddef>
 #include <tuple>
-#include <type_traits>
+#include <utility>
 
 namespace prgrmr
 {
@@ -14,289 +15,383 @@ namespace prgrmr
 ///   Contains one to many delegates which can be registered and unregistered at runtime.
 /// </summary>
 ///
-template<class... functions_t>
+template<concepts::invocable::Invocable... TInvocables>
 class delegates final
 {
 public:
-   static_assert(concepts::arguments::IsNotEmpty<functions_t...>, "The argument list cannot be empty.");
+   static_assert(concepts::arguments::IsNotEmpty<TInvocables...>, "The argument list cannot be empty.");
 
-   static_assert(concepts::invocable::IsSameResultType<functions_t...>,
-                 "The argument list contains at least one function doesn't return the same type.");
-
-   static_assert(concepts::invocable::AreInvocablesSignaturesUnique<functions_t...>,
-                 "The argument list contains at least one pair of functions having the same signature.");
-
-   using functions_type = concepts::invocable::invocables_type<functions_t...>;
-
-   using result_type = concepts::invocable::invocables_result_type<functions_t...>;
+   using delegates_type = std::tuple<delegate<TInvocables>...>;
 
    delegates() = default;
-   delegates(const delegates&) = default;
-   delegates(delegates&&) = delete;
+   delegates(const delegates&) = delete;
+   delegates(delegates&&) = default;
 
    ~delegates() = default;
 
-   delegates& operator=(const delegates&) = default;
-   delegates& operator=(delegates&&) = delete;
+   delegates& operator=(const delegates&) = delete;
+   delegates& operator=(delegates&&) = default;
 
    ///
    /// <summary>
-   ///   Constructs an instance and registers all possible functions.
+   ///   Constructs an instance with delegates.
    /// </summary>
    ///
-   /// <param name="functions">A container of all possible functions.</param>
+   /// <param name="delegates">A container of delegates.</param>
    ///
-   explicit delegates(const functions_type& functions)
-   : _functions{ functions }
+   explicit delegates(delegates_type&& delegates)
+   : _delegates{ std::move(delegates) }
    {
    }
 
    ///
    /// <summary>
-   ///   Constructs an instance and registers all possible functions.
+   ///   Constructs an instance with an invocable for each delegate.
    /// </summary>
    ///
-   /// <param name="functions">A container of all possible functions.</param>
+   /// <param name="invocables">The invocables to initialize the delegates with.</param>
    ///
-   explicit delegates(functions_type&& functions)
-   : _functions{ std::forward<functions_type>(functions) }
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   explicit delegates(TArgs&&... invocables)
+   : _delegates{ delegate<TInvocables>{ std::forward<TArgs>(invocables) }... }
    {
    }
 
    ///
    /// <summary>
-   ///   Registers all possible functions.
+   ///   Constructs an instance from a tuple of invocables.
    /// </summary>
    ///
-   /// <param name="functions">A container of all possible functions.</param>
+   /// <param name="invocables_tuple">A tuple containing an invocable for each delegate.</param>
    ///
-   void register_functions(const functions_type& functions)
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   explicit delegates(std::tuple<TArgs...>&& invocables_tuple)
+   : _delegates{ [this]<std::size_t... Is>(std::tuple<TArgs...>&& t, std::index_sequence<Is...>) {
+        return std::make_tuple(delegate<TInvocables>{ std::get<Is>(std::move(t)) }...);
+     }(std::move(invocables_tuple), std::index_sequence_for<TInvocables...>{}) }
    {
-      _functions = functions;
+   }
+
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   explicit delegates(const std::tuple<TArgs...>& invocables_tuple)
+   : _delegates{ [this]<std::size_t... Is>(const std::tuple<TArgs...>& t, std::index_sequence<Is...>) {
+        return std::make_tuple(delegate<TInvocables>{ std::get<Is>(t) }...);
+     }(invocables_tuple, std::index_sequence_for<TInvocables...>{}) }
+   {
    }
 
    ///
    /// <summary>
-   ///   Registers all possible functions.
+   ///   Resets all delegates to another collection of delegates.
    /// </summary>
    ///
-   /// <param name="functions">A container of all possible functions.</param>
+   /// <param name="delegates">A container of delegates.</param>
    ///
-   void register_functions(functions_type&& functions)
+   void reset(delegates_type&& delegates)
    {
-      _functions = std::forward<functions_type>(functions);
+      _delegates = std::move(delegates);
    }
 
    ///
    /// <summary>
-   ///   Unregisters all possible functions.
+   ///   Resets all delegates with the provided invocables.
    /// </summary>
    ///
-   void unregister_functions()
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   void reset(TArgs&&... invocables)
    {
-      _functions = functions_type{};
+      _delegates = std::make_tuple(delegate<TInvocables>{ std::forward<TArgs>(invocables) }...);
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature.
+   ///   Resets all delegates with a tuple of invocables.
    /// </summary>
    ///
-   /// <returns>A reference to the registered function.</returns>
-   ///
-   /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
-   ///
-   template<class function_t>
-   auto get_function() const
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   void reset(std::tuple<TArgs...>&& invocables_tuple)
    {
-      return std::get<std::decay_t<function_t>>(_functions);
+      _delegates = [this]<std::size_t... Is>(std::tuple<TArgs...>&& t, std::index_sequence<Is...>) {
+         return std::make_tuple(delegate<TInvocables>{ std::get<Is>(std::move(t)) }...);
+      }(std::move(invocables_tuple), std::index_sequence_for<TInvocables...>{});
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its index position.
+   ///   Resets all delegates to their empty state.
    /// </summary>
    ///
-   /// <returns>A reference to the registered function.</returns>
-   ///
-   /// <remarks>When no function has been registered, then reference will be an empty function <--> nullptr.</remarks>
-   ///
-   template<size_t index>
-   auto get_function() const
+   void reset(std::nullptr_t = nullptr)
    {
-      return std::get<index>(_functions);
+      [this]<std::size_t... Is>(std::index_sequence<Is...>)
+      {
+         (std::get<Is>(_delegates).reset(), ...);
+      }(std::index_sequence_for<TInvocables...>{});
    }
 
    ///
    /// <summary>
-   ///   Registers a specific function.
+   ///   Get a specific delegate by its signature or invocable type.
    /// </summary>
    ///
-   /// <param name="function">The function signature that is to be registered.</param>
+   /// <returns>A const reference to the registered delegate.</returns>
    ///
-   template<class function_t>
-   void register_function(function_t&& function)
+   template<concepts::invocable::Invocable TInvocable>
+   const auto& get() const
    {
-      std::get<std::decay_t<function_t>>(_functions) = std::forward<function_t>(function);
+      constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
+      static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
+
+      return std::get<index>(_delegates);
    }
 
    ///
    /// <summary>
-   ///   Registers a specific function by its signature.
+   ///   Get a specific delegate by its signature or invocable type.
    /// </summary>
    ///
-   /// <param name="function">The function signature that is to be registered.</param>
+   /// <returns>A reference to the registered delegate.</returns>
    ///
-   template<class function_t>
-   void register_fn(const std::function<function_t>& function)
+   template<concepts::invocable::Invocable TInvocable>
+   auto& get()
    {
-      std::get<std::function<function_t>>(_functions) = function;
+      constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
+      static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
+
+      return std::get<index>(_delegates);
    }
 
    ///
    /// <summary>
-   ///   Registers a specific function by its index position.
+   ///   Get a specific delegate by its index position.
    /// </summary>
    ///
-   /// <param name="function">The function signature that is to be registered.</param>
+   /// <returns>A const reference to the registered delegate.</returns>
    ///
-   /// <remarks>Invoke this method when multiple functions have the same signature.</remarks>
-   ///
-   template<size_t index, class function_t>
-   void register_function(function_t&& function)
+   template<std::size_t TIndex>
+   const auto& get() const
    {
-      std::get<index>(_functions) = std::forward<function_t>(function);
+      return std::get<TIndex>(_delegates);
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its signature.
+   ///   Get a specific delegate by its index position.
    /// </summary>
    ///
-   template<class function_t>
-   void unregister_function()
+   /// <returns>A reference to the registered delegate.</returns>
+   ///
+   template<std::size_t TIndex>
+   auto& get()
    {
-      std::get<std::decay_t<function_t>>(_functions) = nullptr;
+      return std::get<TIndex>(_delegates);
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its tuple index.
+   ///   Resets a specific delegate by its signature or invocable type to its empty state.
    /// </summary>
    ///
-   template<size_t index>
-   void unregister_function()
+   template<concepts::invocable::Invocable TInvocable>
+   void reset(std::nullptr_t = nullptr)
    {
-      std::get<index>(_functions) = nullptr;
+      get<TInvocable>().reset();
    }
 
    ///
    /// <summary>
-   ///   Invoke a specific function by its signature.
+   ///   Resets a specific delegate by its signature or invocable type to another invocable.
    /// </summary>
    ///
-   /// <param name="args">The arguments to pass to the function.</param>
+   /// <param name="invocable">The invocable to register.</param>
    ///
-   /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
-   ///
-   template<class function_t, class... args_t>
-   auto invoke(args_t&&... args)
+   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(TTargetInvocable&& invocable)
    {
-      return get_function<function_t>()(std::forward<args_t>(args)...);
+      get<TInvocable>().reset(std::forward<TTargetInvocable>(invocable));
    }
 
    ///
    /// <summary>
-   ///   Invokes the function that matches the provided argument types.
+   ///   Resets a specific delegate by its index position to its empty state.
    /// </summary>
    ///
-   template<class... args_t>
-   auto invoke(args_t&&... args)
+   template<std::size_t TIndex>
+   void reset(std::nullptr_t = nullptr)
    {
-       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
-
-       return invoke<function_t>(std::forward<args_t>(args)...);
+      get<TIndex>().reset();
    }
 
    ///
    /// <summary>
-   ///   Invoke a specific function by its tuple index.
+   ///   Resets a specific delegate by its index position to another invocable.
    /// </summary>
    ///
-   /// <param name="args">The arguments to pass to the function.</param>
+   /// <param name="invocable">The invocable to register.</param>
    ///
-   /// <exception cref="std::bad_function_call">When the function has not been registered.</exception>
-   ///
-   template<size_t index, class... args_t>
-   auto invoke(args_t&&... args)
+   template<std::size_t TIndex, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(TTargetInvocable&& invocable)
    {
-      return get_function<index>()(std::forward<args_t>(args)...);
+      get<TIndex>().reset(std::forward<TTargetInvocable>(invocable));
    }
 
    ///
    /// <summary>
-   ///   Locates the function by its signature and when it's registered, invokes it.
+   ///   Invoke a specific delegate by its signature or invocable type.
    /// </summary>
    ///
-   /// <param name="args">The arguments to pass to the function.</param>
+   /// <param name="parameters">The arguments to pass to the delegate.</param>
+   ///
+   /// <exception cref="std::bad_function_call">When the delegate has not been registered.</exception>
+   ///
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   auto invoke(TParameters&&... parameters) const
+   {
+      static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
+                    "The provided parameters do not match the requested delegate signature.");
+
+      if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
+      {
+         return get<TInvocable>().invoke(std::forward<TParameters>(parameters)...);
+      }
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes the delegate that matches the provided argument types.
+   /// </summary>
+   ///
+   template<typename... TParameters>
+   auto invoke(TParameters&&... parameters) const
+   {
+      static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
+                    "No matching delegate found in delegates for the provided parameters.");
+
+      if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
+      {
+         using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
+
+         return invoke<TInvocable>(std::forward<TParameters>(parameters)...);
+      }
+   }
+
+   ///
+   /// <summary>
+   ///   Invokes the delegate that matches the provided argument types.
+   /// </summary>
+   ///
+   template<typename... TParameters>
+   auto operator()(TParameters&&... parameters) const
+   {
+      return invoke(std::forward<TParameters>(parameters)...);
+   }
+
+   ///
+   /// <summary>
+   ///   Invoke a specific delegate by its tuple index.
+   /// </summary>
+   ///
+   /// <param name="parameters">The arguments to pass to the delegate.</param>
+   ///
+   /// <exception cref="std::bad_function_call">When the delegate has not been registered.</exception>
+   ///
+   template<std::size_t TIndex, typename... TParameters>
+   auto invoke(TParameters&&... parameters) const
+   {
+      using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
+      static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
+                    "The provided parameters do not match the delegate signature at the specified index.");
+
+      if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
+      {
+         return get<TIndex>().invoke(std::forward<TParameters>(parameters)...);
+      }
+   }
+
+   ///
+   /// <summary>
+   ///   Locates the delegate by its signature and when it's registered, invokes it.
+   /// </summary>
+   ///
+   /// <param name="parameters">The arguments to pass to the delegate.</param>
    ///
    /// <returns>
-   ///   When the function is registered, the result is wrapped in std::optional.
-   ///   Otherwise std::nullopt indicates that the function isn't registered.
+   ///   When the delegate is registered, the result is wrapped in std::optional.
+   ///   Otherwise std::nullopt indicates that the delegate isn't registered.
    /// </returns>
    ///
-   /// <seealso cref="prgrmr::invoke_optional"/>
-   ///
-   template<class function_t, class... args_t>
-   requires concepts::invocable::InvocableWithResult<function_t>
-   auto invoke_optional(args_t&&... args) const
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   requires concepts::invocable::InvocableWithResult<TInvocable>
+   auto invoke_optional(TParameters&&... parameters) const
    {
-      return prgrmr::invoke_optional(get_function<function_t>(),
-                                     std::forward<args_t>(args)...);
+      static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
+                    "The provided parameters do not match the requested delegate signature.");
+
+      if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
+      {
+         return get<TInvocable>().invoke_optional(std::forward<TParameters>(parameters)...);
+      }
    }
 
    ///
    /// <summary>
-   ///   Locates the function by its signature and when it's registered, invokes it.
+   ///   Locates the delegate by its signature and when it's registered, invokes it.
    /// </summary>
    ///
-   /// <param name="args">The arguments to pass to the function.</param>
+   /// <param name="parameters">The arguments to pass to the delegate.</param>
    ///
    /// <returns>
-   ///   When the function is registered, the result is wrapped in std::optional.
-   ///   Otherwise std::nullopt indicates that the function isn't registered.
+   ///   When the delegate is registered, the result is wrapped in std::optional.
+   ///   Otherwise std::nullopt indicates that the delegate isn't registered.
    /// </returns>
    ///
-   /// <seealso cref="invoke_optional<function_t>"/>
-   ///
-   template<class... args_t>
-   auto invoke_optional(args_t&&... args) const
+   template<typename... TParameters>
+   auto invoke_optional(TParameters&&... parameters) const
    {
-       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
+      static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
+                    "No matching delegate found in delegates for the provided parameters.");
 
-       return invoke_optional<function_t>(std::forward<args_t>(args)...);
+      if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
+      {
+         using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
+
+         return invoke_optional<TInvocable>(std::forward<TParameters>(parameters)...);
+      }
    }
 
    ///
    /// <summary>
-   ///   Locates the function by its tuple index and if one a registered, then invokes it.
+   ///   Locates the delegate by its tuple index and if one is registered, then invokes it.
    /// </summary>
    ///
-   /// <param name="args">The arguments to pass to the function.</param>
+   /// <param name="parameters">The arguments to pass to the delegate.</param>
    ///
    /// <returns>
-   ///  An optional containing the result of invoking the function.
-   ///  Otherwise, std::nullopt when the invocable function is not defined.
+   ///  An optional containing the result of invoking the delegate.
+   ///  Otherwise, std::nullopt when the delegate is not defined.
    /// </returns>
    ///
-   ///
-   /// <seealso cref="prgrmr::invoke_optional"/>
-   ///
-   template<size_t index, class... args_t>
-   auto invoke_optional(args_t&&... args) const
+   template<std::size_t TIndex, typename... TParameters>
+   requires concepts::invocable::InvocableWithResult<std::tuple_element_t<TIndex, std::tuple<TInvocables...>>>
+   auto invoke_optional(TParameters&&... parameters) const
    {
-      return prgrmr::invoke_optional(get_function<index>(),
-                                     std::forward<args_t>(args)...);
+      using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
+      static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
+                    "The provided parameters do not match the delegate signature at the specified index.");
+
+      if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
+      {
+         return get<TIndex>().invoke_optional(std::forward<TParameters>(parameters)...);
+      }
    }
 
    ///
@@ -308,10 +403,10 @@ public:
    ///
    void swap(delegates& other)
    {
-      _functions.swap(other._functions);
+      _delegates.swap(other._delegates);
    }
 
 private:
-   functions_type _functions;
+   delegates_type _delegates;
 };
 }

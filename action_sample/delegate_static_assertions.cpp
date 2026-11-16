@@ -4,6 +4,7 @@
 #include <prgrmr/concepts/concepts.hpp>
 #include <cassert>
 #include <iostream>
+#include <string>
 
 using namespace prgrmr;
 
@@ -51,9 +52,9 @@ int main()
     assert(delegates.invoke_optional<0>(5) == std::nullopt);
     assert(delegates.invoke_optional<1>("a") == std::nullopt);
 
-    // Register and verify
-    delegates.register_function<test_fn1>([](int v) { return v * 2; });
-    delegates.register_function<test_fn2>([](const std::string& s) { return static_cast<int>(s.length()); });
+    // Reset (register) and verify
+    delegates.reset<test_fn1>([](int v) { return v * 2; });
+    delegates.reset<test_fn2>([](const std::string& s) { return static_cast<int>(s.length()); });
 
     assert(delegates.invoke_optional<test_fn1>(5) == 10);
     assert(delegates.invoke_optional<test_fn2>("abc") == 3);
@@ -62,7 +63,74 @@ int main()
     assert(delegates.invoke_optional<0>(5) == 10);
     assert(delegates.invoke_optional<1>("abc") == 3);
 
-    // Test delegates_map invoke_optional
+    // Test invoke
+    assert(delegates.invoke<test_fn1>(5) == 10);
+    assert(delegates.invoke<test_fn2>("abc") == 3);
+    assert(delegates.invoke(5) == 10);
+    assert(delegates.invoke(std::string("abc")) == 3);
+    assert(delegates.invoke<0>(5) == 10);
+    assert(delegates.invoke<1>("abc") == 3);
+
+    // Test get
+    assert(delegates.get<test_fn1>().invoke(5) == 10);
+    assert(delegates.get<int(int)>().invoke(5) == 10);
+    assert(delegates.get<0>().invoke(5) == 10);
+
+    // Test reset<TInvocable>() with default nullptr
+    delegates.reset<test_fn1>();
+    assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
+    assert(delegates.invoke_optional<test_fn2>("abc") == 3);
+
+    delegates.reset<test_fn1>([](int v) { return v * 2; });
+    assert(delegates.invoke_optional<test_fn1>(5) == 10);
+
+    // Test reset<TInvocable>(nullptr)
+    delegates.reset<test_fn1>(nullptr);
+    assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
+
+    delegates.reset<test_fn1>([](int v) { return v * 2; });
+    assert(delegates.invoke_optional<test_fn1>(5) == 10);
+
+    // Test reset<index>()
+    delegates.reset<0>();
+    assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
+    delegates.reset<0>([](int v) { return v * 2; });
+    assert(delegates.invoke_optional<0>(5) == 10);
+
+    // Test non-templated reset() on the whole collection
+    delegates.reset();
+    assert(delegates.invoke_optional<test_fn1>(5) == std::nullopt);
+    assert(delegates.invoke_optional<test_fn2>("abc") == std::nullopt);
+
+    // Re-register for further tests
+    delegates.reset<test_fn1>([](int v) { return v * 2; });
+    delegates.reset<test_fn2>([](const std::string& s) { return static_cast<int>(s.length()); });
+
+    // Test delegates with function signature types directly
+    prgrmr::delegates<int(int), int(std::string)> sig_delegates;
+    assert(sig_delegates.invoke_optional<int(int)>(5) == std::nullopt);
+    sig_delegates.reset<int(int)>([](int v) { return v * 5; });
+    assert(sig_delegates.invoke_optional<int(int)>(5) == 25);
+    assert(sig_delegates.invoke<int(int)>(5) == 25);
+    assert(sig_delegates.invoke(5) == 25);
+    sig_delegates.reset<int(int)>();
+    assert(sig_delegates.invoke_optional<int(int)>(5) == std::nullopt);
+
+    // Test delegates with different result types
+    prgrmr::delegates<int(int), std::string(int)> diff_result_delegates;
+    diff_result_delegates.reset<int(int)>([](int v) { return v * 2; });
+    diff_result_delegates.reset<std::string(int)>([](int v) { return std::to_string(v); });
+    assert(diff_result_delegates.invoke<int(int)>(5) == 10);
+    assert(diff_result_delegates.invoke<std::string(int)>(5) == "5");
+
+    // Test delegates with duplicate signatures (accessed by index)
+    prgrmr::delegates<int(int), int(int)> dup_sig_delegates;
+    dup_sig_delegates.reset<0>([](int v) { return v + 1; });
+    dup_sig_delegates.reset<1>([](int v) { return v + 2; });
+    assert(dup_sig_delegates.invoke<0>(5) == 6);
+    assert(dup_sig_delegates.invoke<1>(5) == 7);
+
+    // Test delegates_map invoke_optional and reset
     delegates_map<std::string, test_fn1, test_fn2> delegates_map;
 
     // Missing key - should return std::nullopt
@@ -70,14 +138,31 @@ int main()
     assert(delegates_map.invoke_optional("missing", 5) == std::nullopt);
     assert(delegates_map.invoke_optional<0>("missing", 5) == std::nullopt);
 
-    // Register delegate and verify
-    delegates_map.register_delegate("active", delegates);
+    // Reset with delegates_type and verify
+    delegates_map.reset("active", std::move(delegates));
     assert(delegates_map.invoke_optional<test_fn1>("active", 5) == 10);
     assert(delegates_map.invoke_optional<test_fn2>("active", "abc") == 3);
     assert(delegates_map.invoke_optional("active", 5) == 10);
     assert(delegates_map.invoke_optional("active", std::string("abc")) == 3);
     assert(delegates_map.invoke_optional<0>("active", 5) == 10);
     assert(delegates_map.invoke_optional<1>("active", "abc") == 3);
+
+    // Test resetting with parameter pack of invocables
+    delegates_map.reset("pack", [](int v) { return v * 3; }, [](const std::string& s) { return static_cast<int>(s.length() * 2); });
+    assert(delegates_map.invoke_optional<test_fn1>("pack", 5) == 15);
+    assert(delegates_map.invoke_optional<test_fn2>("pack", "abc") == 6);
+
+    // Test resetting a single invocable matching key
+    delegates_map.reset<test_fn1>("pack", [](int v) { return v * 4; });
+    assert(delegates_map.invoke_optional<test_fn1>("pack", 5) == 20);
+
+    // Test resetting by index
+    delegates_map.reset<0>("pack", [](int v) { return v * 5; });
+    assert(delegates_map.invoke_optional<0>("pack", 5) == 25);
+
+    // Test resetting key to nullptr
+    delegates_map.reset("pack", nullptr);
+    assert(delegates_map.invoke_optional<test_fn1>("pack", 5) == std::nullopt);
 
     using test_fnx = std::function<int(int)>;
 

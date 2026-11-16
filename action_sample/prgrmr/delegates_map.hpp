@@ -2,27 +2,25 @@
 
 #include "./delegates.hpp"
 #include "./concepts/invocable.hpp"
+#include <cstddef>
 #include <unordered_map>
 
 namespace prgrmr
 {
 ///
 /// <summary>
-///   The delegates_map class allows to register a collection of delegate functions.
+///   The delegates_map class allows to register a collection of delegates.
 ///   <para>Each delegate is identified by a unique key identifier.</para>
-///   <para>When a delegate is found, it is then possible to invoke the corresponding function that matches the given function signature.</para>
+///   <para>When a delegate is found, it is then possible to invoke the corresponding invocable that matches the given function signature.</para>
 /// </summary>
 ///
-template<class key_t, class... functions_t>
+template<typename TKey, concepts::invocable::Invocable... TInvocables>
 class delegates_map final
 {
 public:
-   using key_type = key_t;
-   using delegates_type = delegates<functions_t...>;
+   using key_type = TKey;
+   using delegates_type = delegates<TInvocables...>;
    using delegates_map_type = std::unordered_map<key_type, delegates_type>;
-
-   using function_types = delegates_type::functions_type;
-   using result_type = delegates_type::result_type;
 
    delegates_map() = default;
    delegates_map(const delegates_map&) = default;
@@ -35,126 +33,189 @@ public:
 
    ///
    /// <summary>
-   ///   Registers a delegate with the given key.
+   ///   Clears all delegates from the map.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
-   /// <param name="delegate">The delegate that contains the functions that can be invoked.</param>
-   ///
-   void register_delegate(const key_type& key,
-                          const delegates_type& delegate)
+   void clear()
    {
-      _delegates.emplace(key, delegate);
+      _delegates.clear();
    }
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Checks if the map is empty.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
-   ///
-   void register_delegate(const key_type& key,
-                          delegates_type&& delegate)
+   auto empty() const
    {
-      _delegates.emplace(key, std::forward<delegates_type>(delegate));
+      return _delegates.empty();
    }
 
    ///
    /// <summary>
-   ///   Unregisters the delegate functions that was associated with the given key.
+   ///   Provides the number of entries in the map.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the functions were registered under.</param>
+   auto size() const
+   {
+      return _delegates.size();
+   }
+
    ///
-   void unregister_delegate(const key_type& key)
+   /// <summary>
+   ///   Erases an entry  from the map that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the delegates.</param>
+   ///
+   void erase(const key_type& key)
    {
       _delegates.erase(key);
    }
 
    ///
    /// <summary>
-   ///   Registers all the functions under the given key.
+   ///   Registers all the invocables under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    ///
-   void register_functions(const key_type& key,
-                           function_types&& functions)
+   void reset(const key_type& key,
+              delegates_type&& delegates)
    {
-       register_delegate(key, delegates_type{ std::forward<function_types>(functions) });
+      _delegates.insert_or_assign(key, std::move(delegates));
    }
 
    ///
    /// <summary>
-   ///   Registers a single function under the given key.
+   ///   Unregisters the delegate of invocables that was associated with the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with this function.</param>
-   /// <param name="function">The function that is to be registered.</param>
+   /// <param name="key">The unique identifying key in which the functions were registered under.</param>
    ///
-   template<class function_t>
-   void register_function(const key_type& key,
-                          function_t&& function)
+   void reset(const key_type& key, std::nullptr_t = nullptr)
    {
-      _delegates[key].register_function(std::forward<function_t>(function));
-   }
-
-   ///
-   /// <summary>
-   ///   Registers a single function under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with this function.</param>
-   /// <param name="function">The function that is to be registered.</param>
-   ///
-   template<size_t index, class function_t>
-   void register_function(const key_type& key,
-                          function_t&& function)
-   {
-      _delegates[key].register_function<index>(std::forward<function_t>(function));
-   }
-
-   ///
-   /// <summary>
-   ///   Unregisters a specific function by its signature that was registered under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   ///
-   template<class function_t>
-   void unregister_function(const key_type& key)
-   {
-      if (const auto delegate = get_delegate(key); delegate != nullptr)
+      if (const auto delegate = get(key); delegate != nullptr)
       {
-          delegate->template unregister_function<function_t>();
+         delegate->reset();
       }
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its signature that was registered under the given key.
+   ///   Registers a new delegate instance with these invocables under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
+   /// <param name="invocables">The invocables that are to be registered as delegate under this key.</param>
    ///
-   template<size_t index>
-   void unregister_function(const key_type& key)
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   void reset(const key_type& key,
+              TArgs&&... invocables)
    {
-       if (const auto delegate = get_delegate(key); delegate != nullptr)
-       {
-           delegate->template unregister_function<index>();
-       }
+      _delegates.insert_or_assign(key, delegates_type{ std::forward<TArgs>(invocables)... });
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
+   ///   Registers a new delegate instance with a tuple of invocables under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="key">The unique identifying key.</param>
+   /// <param name="invocables_tuple">The tuple of invocables.</param>
    ///
-   auto get_delegate(const key_type& key) const
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   void reset(const key_type& key,
+              std::tuple<TArgs...>&& invocables_tuple)
+   {
+      _delegates.insert_or_assign(key, delegates_type{ std::move(invocables_tuple) });
+   }
+
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   void reset(const key_type& key,
+              const std::tuple<TArgs...>& invocables_tuple)
+   {
+      _delegates.insert_or_assign(key, delegates_type{ invocables_tuple });
+   }
+
+   ///
+   /// <summary>
+   ///   Resets a single invocable under the given key by its signature.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with this function.</param>
+   /// <param name="invocable">The function that is to be registered.</param>
+   ///
+   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
+   {
+      _delegates[key].template reset<TInvocable>(std::forward<TTargetInvocable>(invocable));
+   }
+
+   ///
+   /// <summary>
+   ///   Resets a single invocable under the given key by its index.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with this function.</param>
+   /// <param name="invocable">The function that is to be registered.</param>
+   ///
+   template<size_t TIndex, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
+   {
+      _delegates[key].template reset<TIndex>(std::forward<TTargetInvocable>(invocable));
+   }
+
+   ///
+   /// <summary>
+   ///   Unregisters a specific invocable by its signature from the delegate that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching delegates.</param>
+   ///
+   template<concepts::invocable::Invocable TInvocable>
+   void reset(const key_type& key,
+              std::nullptr_t)
+   {
+      if (const auto delegate = get(key); delegate != nullptr)
+      {
+          delegate->template reset<TInvocable>(nullptr);
+      }
+   }
+
+   ///
+   /// <summary>
+   ///   Unregisters a specific invocable by its index from the delegate that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching delegates.</param>
+   ///
+   template<size_t TIndex>
+   void reset(const key_type& key,
+              std::nullptr_t)
+   {
+      if (const auto delegate = get(key); delegate != nullptr)
+      {
+          delegate->template reset<TIndex>(nullptr);
+      }
+   }
+
+   ///
+   /// <summary>
+   ///   Get a specific invocable by its signature that was registered under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching delegates.</param>
+   ///
+   auto get(const key_type& key) const
    {
       const auto& iter = _delegates.find(key);
       
@@ -165,12 +226,12 @@ public:
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
+   ///   Get a specific invocable by its signature that was registered under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
    ///
-   auto get_delegate(const key_type& key)
+   auto get(const key_type& key)
    {
       const auto& iter = _delegates.find(key);
       
@@ -181,138 +242,104 @@ public:
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
+   ///   Invoke a specific invocable by its signature that registered under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   ///
-   template<class function_t>
-   auto get_function(const key_type& key) const
-   {
-      const auto delegate = get_delegate(key);
-
-      return (delegate != nullptr)
-           ? delegate->template get_function<function_t>()
-           : nullptr;
-   }
-
-   ///
-   /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   ///
-   template<size_t index>
-   auto get_function(const key_type& key) const
-   {
-      const auto delegate = get_delegate(key);
-
-      return (delegate != nullptr)
-           ? delegate->template get_function<index>()
-           : nullptr;
-   }
-
-   ///
-   /// <summary>
-   ///   Invoke a specific function by its signature that registered under the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
+   /// <param name="parameters">The parameters to pass to the matching delegate.</param>
    ///
    /// <exception cref="std::out_of_range">When there is no function registered with the given key.</exception>
    ///
    /// <seealso cref="delegate::invoke" />
    ///
-   template<class function_t, class... args_t>
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
    decltype(auto) invoke(const key_type& key,
-                         args_t&&... args) const
+                         TParameters&&... parameters) const
    {
-      return at(key).template invoke<function_t>(std::forward<args_t>(args)...);
+      return at(key).template invoke<TInvocable>(std::forward<TParameters>(parameters)...);
    }
 
    ///
    /// <summary>
-   ///   Invoke a specific function by its signature that registered under the given key.
+   ///   Invoke a specific invocable by its signature that registered under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
+   /// <param name="parameters">The parameters to pass to the matching delegate.</param>
    ///
    /// <exception cref="std::out_of_range">When there is no function registered with the given key.</exception>
    ///
    /// <seealso cref="delegate::invoke" />
    ///
-   template<size_t index, class... args_t>
+   template<size_t TIndex, typename... TParameters>
    decltype(auto) invoke(const key_type& key,
-                         args_t&&... args) const
+                         TParameters&&... parameters) const
    {
-      return at(key).template invoke<index>(std::forward<args_t>(args)...);
+      return at(key).template invoke<TIndex>(std::forward<TParameters>(parameters)...);
    }
 
    ///
    /// <summary>
-   ///   Invokes a specific function by its signature registered under the given key when available,
-   ///   otherwise returns default-constructed result_type.
+   ///   Invokes a specific invocable by its signature registered under the given key when available,
+   ///   otherwise returns std::nullopt.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
+   /// <param name="parameters">The parameters to pass to the matching delegate.</param>
    ///
    /// <seealso cref="delegate::invoke_optional" />
    ///
-   template<class function_t, class... args_t>
-   requires concepts::invocable::InvocableWithResult<function_t>
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   requires concepts::invocable::InvocableWithResult<TInvocable>
    auto invoke_optional(const key_type& key,
-                        args_t&&... args) const
+                        TParameters&&... parameters) const
    {
-      const auto delegate = get_delegate(key);
+      const auto delegate = get(key);
 
       return (delegate != nullptr)
-           ? delegate->template invoke_optional<function_t>(std::forward<args_t>(args)...)
+           ? delegate->template invoke_optional<TInvocable>(std::forward<TParameters>(parameters)...)
            : std::nullopt;
    }
 
    ///
    /// <summary>
-   ///   Invokes the function that matches the provided argument types registered under the given key when available,
+   ///   Invokes the invocable that matches the provided argument types registered under the given key when available,
    ///   otherwise returns std::nullopt.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
+   /// <param name="parameters">The parameters to pass to the matching delegate.</param>
    ///
    /// <seealso cref="delegate::invoke_optional" />
    ///
-   template<class... args_t>
+   template<typename... TParameters>
    auto invoke_optional(const key_type& key,
-                        args_t&&... args) const
+                        TParameters&&... parameters) const
    {
-       using function_t = concepts::invocable::find_invocable_type<std::tuple<args_t...>, functions_t...>;
+       using invocable_type = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
 
-       return invoke_optional<function_t>(key, std::forward<args_t>(args)...);
+       return invoke_optional<invocable_type>(key, std::forward<TParameters>(parameters)...);
    }
 
    ///
    /// <summary>
-   ///   Invokes a specific function by its tuple index registered under the given key when available,
-   ///   otherwise returns default-constructed result_type.
+   ///   Invokes a specific invocable by its tuple index registered under the given key when available,
+   ///   otherwise returns std::nullopt.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
-   /// <param name="args">The function arguments to pass to the function.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
+   /// <param name="parameters">The parameters to pass to the matching delegate.</param>
    ///
    /// <seealso cref="delegate::invoke_optional" />
    ///
-   template<size_t index, class... args_t>
+   template<size_t TIndex, typename... TParameters>
    auto invoke_optional(const key_type& key,
-                        args_t&&... args) const
+                        TParameters&&... parameters) const
    {
-      const auto delegate = get_delegate(key);
+      const auto delegate = get(key);
       
       return (delegate != nullptr)
-           ? delegate->template invoke_optional<index>(std::forward<args_t>(args)...)
+           ? delegate->template invoke_optional<TIndex>(std::forward<TParameters>(parameters)...)
            : std::nullopt;
    }
 
@@ -330,60 +357,60 @@ public:
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate of functions that matches the given key.
+   ///   Get a reference to a delegate of invocables that matches the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
    ///
    /// <returns>A const reference to a delegate of functions.</returns>
    ///
-   auto operator[](const key_type& key) const
-   {
-      return _delegates[key];
-   }
-
-   ///
-   /// <summary>
-   ///   Get a reference to a delegate of functions that matches the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
-   ///
-   /// <returns>A reference to a delegate of functions.</returns>
-   ///
-   auto operator[](const key_type& key)
-   {
-      return _delegates[key];
-   }
-
-   ///
-   /// <summary>
-   ///   Get a reference to a delegate of functions that matches the given key.
-   /// </summary>
-   ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
-   ///
-   /// <returns>A const reference to a delegate of functions.</returns>
-   ///
-   /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
-   ///
-   auto at(const key_type& key) const
+   const auto& operator[](const key_type& key) const
    {
       return _delegates.at(key);
    }
 
    ///
    /// <summary>
-   ///   Get a reference to a delegate of functions that matches the given key.
+   ///   Get a reference to a delegate of invocables that matches the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
+   /// <param name="key">The key to locate the matching delegates.</param>
    ///
-   /// <returns>A reference to a delegate of functions.</returns>
+   /// <returns>A reference to the delegates associated to the that key.</returns>
+   ///
+   auto& operator[](const key_type& key)
+   {
+      return _delegates[key];
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate of invocables that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching delegates.</param>
+   ///
+   /// <returns>A const reference to a delegate of invocables.</returns>
    ///
    /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
    ///
-   auto at(const key_type& key)
+   const auto& at(const key_type& key) const
+   {
+      return _delegates.at(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to a delegate of invocables that matches the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching delegates.</param>
+   ///
+   /// <returns>A reference to the invocables associated to the that key.</returns>
+   ///
+   /// <throws>std::out_of_range if the container does not have an element with the specified key.</throws>
+   ///
+   auto& at(const key_type& key)
    {
       return _delegates.at(key);
    }

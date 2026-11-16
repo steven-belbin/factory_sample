@@ -1,6 +1,9 @@
 #pragma once
 
 #include "./delegates_map.hpp"
+#include "./concepts/arguments.hpp"
+#include "./concepts/invocable.hpp"
+#include <cstddef>
 
 namespace prgrmr
 {
@@ -8,20 +11,27 @@ namespace prgrmr
 /// <summary>
 ///   The factory_map class allows to construct a class instance by a key.
 ///   <para>The class factory has 0..n entries in which each entry is identified by a unique key.</para>
-///   <para>Any given entry can construct a class using any one of functions, each with different number of arguments and different argument types.</para>
+///   <para>Any given entry can construct a class using any one of delegates, each with different number of arguments and different argument types.</para>
 /// </summary>
 ///
 /// <seealso cref="key_delegates_functions"/>
 ///
-template<class key_t, class... functions_t>
+template<class TKey, concepts::invocable::Invocable... TInvocables>
 class factory_map final
 {
 public:
-   using delegates_map_type = delegates_map<key_t, functions_t...>;
+   static_assert(concepts::arguments::IsNotEmpty<TInvocables...>, "The argument list cannot be empty.");
+
+   static_assert(concepts::invocable::IsSameResultType<TInvocables...>,
+                 "The argument list contains at least one delegate doesn't return the same type.");
+
+   static_assert(concepts::invocable::AreInvocablesSignaturesUnique<TInvocables...>,
+                 "The argument list contains at least one pair of delegates having the same signature.");
+
+   using delegates_map_type = delegates_map<TKey, TInvocables...>;
    using delegates_type = delegates_map_type::delegates_type;
    using key_type = delegates_map_type::key_type;
-   using function_types = delegates_map_type::function_types;
-   using result_type = delegates_map_type::result_type;
+   using result_type = concepts::invocable::invocables_result_type<TInvocables...>;
 
    factory_map() = default;
    factory_map(const factory_map&) = default;
@@ -36,7 +46,7 @@ public:
    /// <param name="delegate">The delegates.</param>
    ///
    explicit factory_map(const delegates_map_type& delegates)
-   : _delegates{ delegates }
+   : _delegates_map{ delegates }
    {
    }
 
@@ -47,191 +57,150 @@ public:
    /// <param name="delegate">The delegates.</param>
    ///
    explicit factory_map(delegates_map_type&& delegates)
-   : _delegates{ std::forward<delegates_map_type>(delegates) }
+   : _delegates_map{ std::forward<delegates_map_type>(delegates) }
    {
    }
 
+   ///
+   /// <summary>
    ///
    /// <summary>
    ///   Registers all the delegate under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
-   /// <param name="delegate">The functions delegate to be registered.</param>
+   /// <param name="delegates">The delegates to be registered.</param>
    ///
-   void register_delegate(const key_type& key,
-                          const delegates_type& delegate)
+   void reset(const key_type& key,
+              delegates_type&& delegates)
    {
-      _delegates.register_delegate(key, delegate);
+      _delegates_map.reset(key, std::move(delegates));
    }
 
    ///
    /// <summary>
-   ///   Registers all the delegate under the given key.
+   ///   Registers the delegates under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with the delegate.</param>
-   /// <param name="delegate">The functions delegate to be registered.</param>
+   /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
+   /// <param name="invocables">The invocables that are to be registered.</param>
    ///
-   void register_delegate(const key_type& key,
-                          delegates_type&& delegate)
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   void reset(const key_type& key,
+              TArgs&&... invocables)
    {
-      _delegates.register_delegate(key, std::forward<delegates_type>(delegate));
+      _delegates_map.reset(key, std::forward<TArgs>(invocables)...);
    }
 
    ///
    /// <summary>
-   ///   Registers the functions under the given key.
+   ///   Registers a tuple of invocables under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with these function signatures.</param>
-   /// <param name="functions">The functions that are to be registered.</param>
+   /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
+   /// <param name="invocables_tuple">The tuple of invocables to be registered.</param>
    ///
-   /// <todo>
-   ///   When providing lambda functions this requires explicitly specifying the functions' signature.
-   ///      <code>
-   ///          factory.register_functions(
-   ///              key,
-   ///              base_constructor{ []() { return std::make_unique<runner>(); } },
-   ///              numeric_constructor{ [&factory, &key](int a, float b) { return factory.construct(key); } }
-   ///          );
-   ///      </code>
-   ///
-   ///   It would be useful to code as:
-   ///      <code>
-   ///          factory.register_function(
-   ///              key,
-   ///              []() { return std::make_unique<runner>(); }
-   ///              [&factory, &key](int a, float b) { return factory.construct(key); }
-   ///          );
-   ///      </code>
-   /// </todo>
-   ///
-   void register_functions(const key_type& key,
-                           function_types&& functions)
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   void reset(const key_type& key,
+              std::tuple<TArgs...>&& invocables_tuple)
    {
-      _delegates.register_delegate(key,
-                                   delegates_type{ std::forward<function_types>(functions) });
+      _delegates_map.reset(key, std::move(invocables_tuple));
+   }
+
+   template<typename... TArgs>
+   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   void reset(const key_type& key,
+              const std::tuple<TArgs...>& invocables_tuple)
+   {
+      _delegates_map.reset(key, invocables_tuple);
    }
 
    ///
    /// <summary>
-   ///   Registers a specific function by its index position.
+   ///   Registers a specific delegate by its index position.
    /// </summary>
    ///
-   /// <param name="function">The function signature that is to be registered.</param>
+   /// <param name="key">The unique identifying key.</param>
+   /// <param name="invocable">The invocable that is to be registered.</param>
    ///
-   /// <remarks>Invoke this method when multiple functions have the same signature.</remarks>
-   ///
-   template<size_t index, class function_t>
-   void register_function(const key_type& key,
-                          function_t&& function)
+   template<size_t TIndex, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
    {
-       _delegates.register_delegate<index>(key, std::forward<function_t>(function));
+      _delegates_map.template reset<TIndex>(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///
    /// <summary>
-   ///   Unregisters all the functions that were registered with the given key.
+   ///   Unregisters all the delegates that were registered with the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the functions were registered under.</param>
+   /// <param name="key">The unique identifying key in which the delegates were registered under.</param>
    ///
-   void unregister_delegate(const key_type& key)
+   void reset(const key_type& key,
+              std::nullptr_t = nullptr)
    {
-      return _delegates.unregister_delegate(key);
+      _delegates_map.reset(key, nullptr);
    }
 
    ///
    /// <summary>
-   ///   Registers a single function under the given key.
+   ///   Erases the entry matching the given key from the map.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key to associate with this function.</param>
-   /// <param name="function">The function that is to be registered.</param>
+   /// <param name="key">The unique identifying key.</param>
    ///
-   /// <todo>
-   ///   When providing a lambda function this requires explicitly specifying the function's signature.
-   ///      <code>
-   ///          factory.register_function<numeric_constructor>(
-   ///              key,
-   ///              [](int a, float b) { return std::make_unique<runner>(); }
-   ///          );
-   ///
-   ///          factory.register_function(
-   ///              key,
-   ///              numeric_constructor{ [&factory, &key](int a, float b) { return factory.construct(key); } }
-   ///          );
-   ///      </code>
-   ///
-   ///   It would be useful to code as:
-   ///      <code>
-   ///          factory.register_function(
-   ///              key,
-   ///              [&factory, &key](int a, float b) { return factory.construct(key); }
-   ///          );
-   ///      </code>
-   /// </todo>
-   ///
-   template<class function_t>
-   void register_function(const key_type& key,
-                          function_t&& function)
+   void erase(const key_type& key)
    {
-      _delegates.register_function(key, std::forward<function_t>(function));
+      _delegates_map.erase(key);
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its signature that was registered under the given key.
+   ///   Registers a single delegate under the given key by its signature.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="key">The unique identifying key to associate with this delegate.</param>
+   /// <param name="invocable">The invocable that is to be registered.</param>
    ///
-   template<class function_t>
-   void unregister_function(const key_type& key)
+   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
    {
-      _delegates.template unregister_function<function_t>(key);
+      _delegates_map.template reset<TInvocable>(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///
    /// <summary>
-   ///   Unregisters a specific function by its index position that was registered under the given key.
+   ///   Unregisters a specific delegate by its signature that was registered under the given key.
    /// </summary>
    ///
-   /// <param name="key">The unique identifying key in which the function was registered under.</param>
+   /// <param name="key">The unique identifying key in which the delegate was registered under.</param>
    ///
-   template<size_t index>
-   void unregister_function(const key_type& key)
+   template<concepts::invocable::Invocable TInvocable>
+   void reset(const key_type& key,
+              std::nullptr_t = nullptr)
    {
-      _delegates.template unregister_function<index>(key);
+      _delegates_map.template reset<TInvocable>(key, nullptr);
    }
 
    ///
    /// <summary>
-   ///   Get a specific function by its signature that was registered under the given key.
+   ///   Unregisters a specific delegate by its index position that was registered under the given key.
    /// </summary>
    ///
-   /// <returns>A reference to the function object.<returns>
-   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   /// <param name="key">The unique identifying key in which the delegate was registered under.</param>
    ///
-   template<class function_t>
-   auto get_function(const key_type& key) const
+   template<size_t TIndex>
+   void reset(const key_type& key,
+              std::nullptr_t = nullptr)
    {
-      return _delegates.template get_function<function_t>(key);
-   }
-
-   ///
-   /// <summary>
-   ///   Get a specific function by its index position that was registered under the given key.
-   /// </summary>
-   ///
-   /// <returns>A reference to the function object.<returns>
-   /// <returns>nullptr_t when the given key cannot be found.<returns>
-   ///
-   template<size_t index>
-   auto get_function(const key_type& key) const
-   {
-      return _delegates.template get_function<index>(key);
+      _delegates_map.template reset<TIndex>(key, nullptr);
    }
 
    ///
@@ -244,25 +213,25 @@ public:
    /// <returns>An instance of the class.<returns>
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
-   template<class function_t, class... args_t>
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
    auto construct(const key_type& key,
-                  args_t&&... args) const
+                  TParameters&&... parameters) const
    {
-      return _delegates.template
-             invoke_optional<function_t>(key, std::forward<args_t>(args)...)
+      return _delegates_map.template
+             invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
              .value_or(nullptr);
    }
 
    ///
    /// <summary>
-   ///   Invokes the function that matches the provided argument types.
+   ///   Invokes the delegate that matches the provided argument types.
    /// </summary>
    ///
-   template<class... args_t>
+   template<typename... TParameters>
    auto construct(const key_type& key,
-                  args_t&&... args) const
+                  TParameters&&... parameters) const
    {
-      return _delegates.invoke_optional(key, std::forward<args_t>(args)...)
+      return _delegates_map.invoke_optional(key, std::forward<TParameters>(parameters)...)
                        .value_or(nullptr);
    }
 
@@ -276,12 +245,12 @@ public:
    /// <returns>An instance of the class.<returns>
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
-   template<size_t index, class... args_t>
+   template<size_t TIndex, typename... TParameters>
    auto construct(const key_type& key,
-                  args_t&&... args) const
+                  TParameters&&... parameters) const
    {
-      return _delegates.template
-             invoke_optional<index>(key, std::forward<args_t>(args)...)
+      return _delegates_map.template
+             invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)
              .value_or(nullptr);
    }
 
@@ -294,10 +263,10 @@ public:
    ///
    void swap(factory_map& other)
    {
-      _delegates.swap(other._delegates);
+      _delegates_map.swap(other._delegates_map);
    }
 
 private:
-   delegates_map_type _delegates;
+   delegates_map_type _delegates_map;
 };
 }

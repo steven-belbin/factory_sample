@@ -55,7 +55,7 @@ void register_constructors(shoe_factory& factory,
 
     if constexpr (std::default_initializable<T>)
     {
-        factory.register_function<base_constructor>(key, std::make_unique<T>);
+        factory.reset<base_constructor>(key, std::make_unique<T>);
         std::cout << "Registered the 'default initializable' constructor.\n";
 
         if constexpr (!std::constructible_from<T, int, float>)
@@ -63,14 +63,14 @@ void register_constructors(shoe_factory& factory,
             auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
                  { return factory.construct<base_constructor>(key); };
 
-            factory.register_function<numerics_constructor>(key, std::move(fun));
+            factory.reset<numerics_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
         }
     }
 
     if constexpr (std::constructible_from<T, int, double>)
     {
-        factory.register_function<numerics_constructor>(key, std::make_unique<T, int, float>);
+        factory.reset<numerics_constructor>(key, std::make_unique<T, int, float>);
         std::cout << "Registered the 'numerics' constructor.\n";
 
         if constexpr (!std::default_initializable<T>)
@@ -78,7 +78,7 @@ void register_constructors(shoe_factory& factory,
             auto fun = [&factory, key]()
                  { return factory.construct<numerics_constructor>(key, 0, 0.0f); };
 
-            factory.register_function<base_constructor>(key, std::move(fun));
+            factory.reset<base_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
         }
     }
@@ -114,7 +114,7 @@ void register_constructors<runner>(shoe_factory& factory,
    std::cout << "                         Registering " << key << " constructors.\n";
    std::cout << "============================================================================================\n";
 
-   factory.register_functions
+   factory.reset
    (
      key,
      std::make_tuple
