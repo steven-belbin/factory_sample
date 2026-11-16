@@ -21,27 +21,27 @@ void test_constructors(const nike::shoe_factory& factory,
    std::cout << "----------  Constructing using templated signatures.  -------------\n";
 
    std::cout << "Base signature.\n";
-   run_shoe_tests(factory.construct<nike::base_constructor>(key));
+   run_shoe_tests(factory.make<nike::base_constructor>(key));
 
    std::cout << "\nConstruct using numerics signature.\n";
-   run_shoe_tests(factory.construct<nike::numerics_constructor>(key, 5, 5.0f));
+   run_shoe_tests(factory.make<nike::numerics_constructor>(key, 5, 5.0f));
 
    std::cout << "----------  Constructing using implicit signatures.  -------------\n";
 
    std::cout << "Base signature.\n";
-   run_shoe_tests(factory.construct(key));
+   run_shoe_tests(factory.make(key));
 
    std::cout << "\nConstruct using numerics signature.\n";
-   run_shoe_tests(factory.construct(key, 5, 5.0f));
+   run_shoe_tests(factory.make(key, 5, 5.0f));
 
 
    std::cout << "\n----------  Constructing using tuples.  --------------\n";
 
    std::cout << "Tuple<0>\n";
-   run_shoe_tests(factory.construct<0>(key));
+   run_shoe_tests(factory.make<0>(key));
 
    std::cout << "\nTuple<1>\n";
-   run_shoe_tests(factory.construct<1>(key, 5, 5.0f));
+   run_shoe_tests(factory.make<1>(key, 5, 5.0f));
 }
 
 void test_factory(nike::shoe_factory& factory,

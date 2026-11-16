@@ -155,7 +155,8 @@ public:
    void reset(const key_type& key,
               TTargetInvocable&& invocable)
    {
-      _delegates[key].template reset<TInvocable>(std::forward<TTargetInvocable>(invocable));
+      _delegates[key].template
+      reset<TInvocable>(std::forward<TTargetInvocable>(invocable));
    }
 
    ///
@@ -171,7 +172,8 @@ public:
    void reset(const key_type& key,
               TTargetInvocable&& invocable)
    {
-      _delegates[key].template reset<TIndex>(std::forward<TTargetInvocable>(invocable));
+      _delegates[key].template
+      reset<TIndex>(std::forward<TTargetInvocable>(invocable));
    }
 
    ///
@@ -256,7 +258,8 @@ public:
    decltype(auto) invoke(const key_type& key,
                          TParameters&&... parameters) const
    {
-      return at(key).template invoke<TInvocable>(std::forward<TParameters>(parameters)...);
+      return at(key).template
+             invoke<TInvocable>(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -275,7 +278,8 @@ public:
    decltype(auto) invoke(const key_type& key,
                          TParameters&&... parameters) const
    {
-      return at(key).template invoke<TIndex>(std::forward<TParameters>(parameters)...);
+      return at(key).template
+             invoke<TIndex>(std::forward<TParameters>(parameters)...);
    }
 
    ///

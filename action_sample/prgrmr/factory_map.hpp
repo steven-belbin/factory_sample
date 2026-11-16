@@ -16,7 +16,7 @@ namespace prgrmr
 ///
 /// <seealso cref="key_delegates_functions"/>
 ///
-template<class TKey, concepts::invocable::Invocable... TInvocables>
+template<typename TKey, concepts::invocable::Invocable... TInvocables>
 class factory_map final
 {
 public:
@@ -63,6 +63,34 @@ public:
 
    ///
    /// <summary>
+   ///   Clears all delegates from the map.
+   /// </summary>
+   ///
+   void clear()
+   {
+      _delegates_map.clear();
+   }
+
+   ///
+   /// <summary>
+   ///   Checks if the map is empty.
+   /// </summary>
+   ///
+   auto empty() const
+   {
+      return _delegates_map.empty();
+   }
+
+   ///
+   /// <summary>
+   ///   Gets the number of entries in the map.
+   /// </summary>
+   ///
+   auto size() const
+   {
+      return _delegates_map.size();
+   }
+
    ///
    /// <summary>
    ///   Registers all the delegate under the given key.
@@ -85,13 +113,13 @@ public:
    /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
    /// <param name="invocables">The invocables that are to be registered.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
-            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   template<typename... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables)) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
    void reset(const key_type& key,
-              TArgs&&... invocables)
+              TOtherInvocables&&... invocables)
    {
-      _delegates_map.reset(key, std::forward<TArgs>(invocables)...);
+      _delegates_map.reset(key, std::forward<TOtherInvocables>(invocables)...);
    }
 
    ///
@@ -102,18 +130,18 @@ public:
    /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
    /// <param name="invocables_tuple">The tuple of invocables to be registered.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   template<typename... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
-              std::tuple<TArgs...>&& invocables_tuple)
+              std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
       _delegates_map.reset(key, std::move(invocables_tuple));
    }
 
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   template<typename... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
-              const std::tuple<TArgs...>& invocables_tuple)
+              const std::tuple<TOtherInvocables...>& invocables_tuple)
    {
       _delegates_map.reset(key, invocables_tuple);
    }
@@ -131,7 +159,8 @@ public:
    void reset(const key_type& key,
               TTargetInvocable&& invocable)
    {
-      _delegates_map.template reset<TIndex>(key, std::forward<TTargetInvocable>(invocable));
+      _delegates_map.template
+      reset<TIndex>(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///
@@ -172,7 +201,8 @@ public:
    void reset(const key_type& key,
               TTargetInvocable&& invocable)
    {
-      _delegates_map.template reset<TInvocable>(key, std::forward<TTargetInvocable>(invocable));
+      _delegates_map.template
+      reset<TInvocable>(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///
@@ -186,7 +216,8 @@ public:
    void reset(const key_type& key,
               std::nullptr_t = nullptr)
    {
-      _delegates_map.template reset<TInvocable>(key, nullptr);
+      _delegates_map.template
+      reset<TInvocable>(key, nullptr);
    }
 
    ///
@@ -200,7 +231,8 @@ public:
    void reset(const key_type& key,
               std::nullptr_t = nullptr)
    {
-      _delegates_map.template reset<TIndex>(key, nullptr);
+      _delegates_map.template
+      reset<TIndex>(key, nullptr);
    }
 
    ///
@@ -214,8 +246,8 @@ public:
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
-   auto construct(const key_type& key,
-                  TParameters&&... parameters) const
+   auto make(const key_type& key,
+             TParameters&&... parameters) const
    {
       return _delegates_map.template
              invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
@@ -228,11 +260,12 @@ public:
    /// </summary>
    ///
    template<typename... TParameters>
-   auto construct(const key_type& key,
-                  TParameters&&... parameters) const
+   auto make(const key_type& key,
+             TParameters&&... parameters) const
    {
-      return _delegates_map.invoke_optional(key, std::forward<TParameters>(parameters)...)
-                       .value_or(nullptr);
+      return _delegates_map
+             .invoke_optional(key, std::forward<TParameters>(parameters)...)
+             .value_or(nullptr);
    }
 
    ///
@@ -246,8 +279,8 @@ public:
    /// <returns>nullptr_t when the given key cannot be found.<returns>
    ///
    template<size_t TIndex, typename... TParameters>
-   auto construct(const key_type& key,
-                  TParameters&&... parameters) const
+   auto make(const key_type& key,
+             TParameters&&... parameters) const
    {
       return _delegates_map.template
              invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)

@@ -61,7 +61,7 @@ void register_constructors(shoe_factory& factory,
         if constexpr (!std::constructible_from<T, int, float>)
         {
             auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
-                 { return factory.construct<base_constructor>(key); };
+                 { return factory.make(key); };
 
             factory.reset<numerics_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
@@ -76,7 +76,7 @@ void register_constructors(shoe_factory& factory,
         if constexpr (!std::default_initializable<T>)
         {
             auto fun = [&factory, key]()
-                 { return factory.construct<numerics_constructor>(key, 0, 0.0f); };
+                 { return factory.make(key, 0, 0.0f); };
 
             factory.reset<base_constructor>(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
