@@ -37,7 +37,7 @@ void configure_shoe_factory(shoe_factory& factory,
     std::cout << "                         Registering " << key << " constructors.\n";
     std::cout << "============================================================================================\n";
 
-    if constexpr (std::default_initializable<TClass> && std::constructible_from<TClass, int, double>)
+    if constexpr (std::default_initializable<TClass> && std::constructible_from<TClass, int, float>)
     {
         factory.reset(key,
           []()
@@ -45,12 +45,12 @@ void configure_shoe_factory(shoe_factory& factory,
             return std::make_unique<TClass>();
           },
 
-          [](int x, double y)
+          [](int x, float y)
           {
             return std::make_unique<TClass>(x, y);
           });
 
-        std::cout << "Registered the 'default initializable' & '(int, double)'.\n";
+        std::cout << "Registered the 'default initializable' & '(int, float)'.\n";
     }
     else if constexpr (std::default_initializable<TClass>)
     {
@@ -60,27 +60,27 @@ void configure_shoe_factory(shoe_factory& factory,
             return std::make_unique<TClass>();
           },
 
-          [&factory, key]([[maybe_unused]] int x, [[maybe_unused]] double y)
+          [&factory, key]([[maybe_unused]] int x, [[maybe_unused]] float y)
           {
             return factory.make(key);
           });
 
-        std::cout << "Registered the 'default initializable' with an adaptor for '(int, double)'.\n";
+        std::cout << "Registered the 'default initializable' with an adaptor for '(int, float)'.\n";
     }
-    else if constexpr (std::constructible_from<TClass, int, double>)
+    else if constexpr (std::constructible_from<TClass, int, float>)
     {
         factory.reset(key,
           [&factory, key]()
           {
-            return factory.make(key, 0, 0.0);
+            return factory.make(key, 0, 0.0f);
           },
 
-          [](int x, double y)
+          [](int x, float y)
           {
             return std::make_unique<TClass>(x, y);
           });
 
-        std::cout << "Registered the '(int, double)' with an adaptor for the 'default initializable'.\n";
+        std::cout << "Registered the '(int, float)' with an adaptor for the 'default initializable'.\n";
     }
 }
 
@@ -109,7 +109,7 @@ void configure_shoe_factory<runner>(shoe_factory& factory,
         return std::make_unique<runner>();        
      },
 
-     []([maybe_unused] int, [maybe_unused] double)
+     []([maybe_unused] int, [maybe_unused] float)
      {
         return std::make_unique<runner>();
      });
