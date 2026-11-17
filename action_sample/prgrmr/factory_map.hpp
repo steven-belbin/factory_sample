@@ -113,8 +113,8 @@ public:
    /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
    /// <param name="invocables">The invocables that are to be registered.</param>
    ///
-   template<typename... TOtherInvocables>
-   requires (sizeof...(TInvocables) > 1 && sizeof...(TOtherInvocables) == sizeof...(TInvocables)) &&
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (concepts::arguments::IsNotEmpty<TOtherInvocables...>) &&
             (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
    void reset(const key_type& key,
               TOtherInvocables&&... invocables)
@@ -130,13 +130,13 @@ public:
    /// <param name="key">The unique identifying key.</param>
    /// <param name="invocable">The invocable to register.</param>
    ///
-   template<typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
-             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
+   template<concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TOtherInvocable>, delegates_type>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
-      _delegates_map.reset(key, std::forward<TTargetInvocable>(invocable));
+      _delegates_map.reset(key, std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -147,7 +147,7 @@ public:
    /// <param name="key">The unique identifying key to associate with these delegate signatures.</param>
    /// <param name="invocables_tuple">The tuple of invocables to be registered.</param>
    ///
-   template<typename... TOtherInvocables>
+   template<concepts::invocable::Invocable... TOtherInvocables>
    requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
               std::tuple<TOtherInvocables...>&& invocables_tuple)
@@ -155,7 +155,7 @@ public:
       _delegates_map.reset(key, std::move(invocables_tuple));
    }
 
-   template<typename... TOtherInvocables>
+   template<concepts::invocable::Invocable... TOtherInvocables>
    requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
               const std::tuple<TOtherInvocables...>& invocables_tuple)
@@ -171,13 +171,13 @@ public:
    /// <param name="key">The unique identifying key.</param>
    /// <param name="invocable">The invocable that is to be registered.</param>
    ///
-   template<size_t TIndex, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   template<size_t TIndex, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
       _delegates_map.template
-      reset<TIndex>(key, std::forward<TTargetInvocable>(invocable));
+        reset<TIndex>(key, std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -213,13 +213,13 @@ public:
    /// <param name="key">The unique identifying key to associate with this delegate.</param>
    /// <param name="invocable">The invocable that is to be registered.</param>
    ///
-   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   template<concepts::invocable::Invocable TInvocable, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
       _delegates_map.template
-      reset<TInvocable>(key, std::forward<TTargetInvocable>(invocable));
+        reset<TInvocable>(key, std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -234,7 +234,7 @@ public:
               std::nullptr_t = nullptr)
    {
       _delegates_map.template
-      reset<TInvocable>(key, nullptr);
+        reset<TInvocable>(key, nullptr);
    }
 
    ///
@@ -249,7 +249,7 @@ public:
               std::nullptr_t = nullptr)
    {
       _delegates_map.template
-      reset<TIndex>(key, nullptr);
+        reset<TIndex>(key, nullptr);
    }
 
    ///

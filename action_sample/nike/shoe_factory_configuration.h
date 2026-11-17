@@ -3,98 +3,85 @@
 #include "lebron.h"
 #include "madison.h"
 #include "runner.h"
-#include "shoe.h"
 #include "shoe_factory.h"
 #include <concepts>
 #include <iostream>
 
 namespace nike
 {
-/// #region "Factory Configuration Documentation"
+///
 /// <summary>
-/// Automatically registers the given class <T> constructors into the
+/// Automatically registers the given class <TClass> constructors into the
 /// class factory for the given key.
 /// 
-/// If the class <T> has a default constructor, then it will be registered
+/// If the class <TClass> has a default constructor, then it will be registered
 /// into the factory when invoking without any parameters. Likewise, if
-/// the class <T> has a constructor that accepts an int and a float, then
+/// the class <TClass> has a constructor that accepts an int and a float, then
 /// then it will be registered as the numerics constructor signature.
 /// </summary>
-/// <typeparam name="T"></typeparam>
+///
+/// <typeparam name="TClass"></typeparam>
 /// <param name="factory"></param>
 /// <param name="key"></param>
+///
 /// <remarks>
-/// This is meant as a convenience function to reduce boilerplate code when
-/// the class <T> provides the expected constructors.
+///   This is meant as a convenience function to reduce boilerplate code when
+///   the class <TClass> provides the expected constructors.
 /// </remarks>
-/// <todo>
-/// Implement as a generic function that it supports any factory &
-/// derived class from the base type.
-///
-/// A challenge is that std::make_unique<T, Args...> returns the
-/// std::unique_ptr<derived class type> whereas typically the
-/// factory's registered constructors return std::unique_ptr<base class type>.
-/// </todo>
-/// <todo>
-/// Implement as a generic function that iterates through the signatures
-/// that the factory supports & registers the constructors of class <T>.
-///
-/// This example is hardcoded for a default initializer & a constructor
-/// that accepts an int & a float. However, a more generic approach might
-/// reduce boilerplate code when registering classes with many constructors.
-/// </todo>
 /// 
-/// #endregion
-template<class T>
-void register_constructors(shoe_factory& factory,
-                           const shoe_factory::key_type& key)
+template<class TClass>
+void configure_shoe_factory(shoe_factory& factory,
+                            const shoe_factory::key_type& key)
 {
     std::cout << "============================================================================================\n";
     std::cout << "                         Registering " << key << " constructors.\n";
     std::cout << "============================================================================================\n";
 
-    if constexpr (std::default_initializable<T>)
+    if constexpr (std::default_initializable<TClass> && std::constructible_from<TClass, int, double>)
     {
-        factory.reset(key, []() { return std::make_unique<T>(); });
-        std::cout << "Registered the 'default initializable' constructor.\n";
+        factory.reset(key,
+          []()
+          {
+            return std::make_unique<TClass>();
+          },
+          [](int x, double y)
+          {
+            return std::make_unique<TClass>(x, y);
+          });
 
-        if constexpr (!std::constructible_from<T, int, float>)
-        {
-            auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
-                 { return factory.make(key); };
-
-            factory.reset(key, std::move(fun));
-            std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
-        }
+        std::cout << "Registered the 'default initializable' & '(int, double)'.\n";
     }
-
-    if constexpr (std::constructible_from<T, int, double>)
+    else if constexpr (std::default_initializable<TClass>)
     {
-        factory.reset(key, [](int a, float b) { return std::make_unique<T>(a, b); });
-        std::cout << "Registered the 'numerics' constructor.\n";
+        factory.reset(key,
+          []()
+          {
+            return std::make_unique<TClass>();
+          },
+          [&factory, key]([[maybe_unused]] int x, [[maybe_unused]] double y)
+          {
+            return factory.make(key);
+          });
 
-        if constexpr (!std::default_initializable<T>)
-        {
-            auto fun = [&factory, key]()
-                 { return factory.make(key, 0, 0.0f); };
+        std::cout << "Registered the 'default initializable' with an adaptor for '(int, double)'.\n";
+    }
+    else if constexpr (std::constructible_from<TClass, int, double>)
+    {
+        factory.reset(key,
+          [&factory, key]()
+          {
+            return factory.make(key, 0, 0.0);
+          },
+          [](int x, double y)
+          {
+            return std::make_unique<TClass>(x, y);
+          });
 
-            factory.reset(key, std::move(fun));
-            std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
-        }
+        std::cout << "Registered the '(int, double)' with an adaptor for the 'default initializable'.\n";
     }
 }
 
-inline std::unique_ptr<shoe> make_runner_base()
-{
-    return std::make_unique<runner>();
-}
-
-inline std::unique_ptr<shoe> make_runner_numeric(int, float)
-{
-    return std::make_unique<runner>();
-}
-
-/// #region "Specialization for runner class"
+///
 /// <summary>
 ///  Demonstrate that it's possible to override the registration of 'runner' derived class.
 /// </summary>
@@ -105,38 +92,40 @@ inline std::unique_ptr<shoe> make_runner_numeric(int, float)
 ///  factory's base constructor for this key.
 /// </remarks>
 ///
-/// #endregion
 template<>
-void register_constructors<runner>(shoe_factory& factory,
-                                   const shoe_factory::key_type& key)
+void configure_shoe_factory<runner>(shoe_factory& factory,
+                                    const shoe_factory::key_type& key)
 {
    std::cout << "============================================================================================\n";
    std::cout << "                         Registering " << key << " constructors.\n";
    std::cout << "============================================================================================\n";
 
-   factory.reset
-   (
-     key,
-     std::make_tuple
-     (
-       base_constructor{ make_runner_base },
-       numerics_constructor{ make_runner_numeric }
-     )
-   );
+   factory.reset(key,
+     []()
+     {
+        return std::make_unique<runner>();        
+     },
+     []([maybe_unused] int, [maybe_unused] double)
+     {
+        return std::make_unique<runner>();
+     });
 }
 
+///
 /// <summary>
 /// Configure the `nike shoe factory` by registers all the derived
 /// `nike shoe` classes into the given factory.
 /// </summary>
+///
 /// <param name="factory"></param>
+///
 inline void configure_shoe_factory(shoe_factory& factory)
 {
-    register_constructors<bird>(factory, "bird");
-    register_constructors<jordan>(factory, "jordan");
-    register_constructors<lebron>(factory, "lebron");
-    register_constructors<madison>(factory, "madison");
-    register_constructors<runner>(factory, "runner");
+    configure_shoe_factory<bird>(factory, "bird");
+    configure_shoe_factory<jordan>(factory, "jordan");
+    configure_shoe_factory<lebron>(factory, "lebron");
+    configure_shoe_factory<madison>(factory, "madison");
+    configure_shoe_factory<runner>(factory, "runner");
 }
 
 }

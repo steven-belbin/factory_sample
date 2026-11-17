@@ -60,7 +60,8 @@ public:
    /// <param name="invocable">An invocable.</param>
    ///
    template<typename TOtherInvocable>
-   requires (!std::is_same_v<std::remove_cvref_t<TOtherInvocable>, delegate> && std::constructible_from<function_type, TOtherInvocable>)
+   requires (!std::is_same_v<std::remove_cvref_t<TOtherInvocable>, delegate> &&
+             std::constructible_from<function_type, TOtherInvocable>)
    explicit delegate(TOtherInvocable&& invocable)
    : _function{ std::forward<TOtherInvocable>(invocable) }
    {

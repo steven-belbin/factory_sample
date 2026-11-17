@@ -106,6 +106,28 @@ int main()
     delegates.reset<test_fn1>([](int v) { return v * 2; });
     delegates.reset<test_fn2>([](const std::string& s) { return static_cast<int>(s.length()); });
 
+    // Test delegates reset with parameter pack of lambdas (std::visit style)
+    delegates.reset(
+        [](int v) { return v * 10; },
+        [](const std::string& s) { return static_cast<int>(s.length() * 10); }
+    );
+    assert(delegates.invoke<test_fn1>(5) == 50);
+    assert(delegates.invoke<test_fn2>("abc") == 30);
+
+    // Test parameter pack reset in arbitrary/reverse order
+    delegates.reset(
+        [](const std::string& s) { return static_cast<int>(s.length() * 100); },
+        [](int v) { return v * 100; }
+    );
+    assert(delegates.invoke<test_fn1>(5) == 500);
+    assert(delegates.invoke<test_fn2>("abc") == 300);
+
+    // Restore for remaining tests
+    delegates.reset(
+        [](int v) { return v * 2; },
+        [](const std::string& s) { return static_cast<int>(s.length()); }
+    );
+
     // Test delegates with function signature types directly
     prgrmr::delegates<int(int), int(std::string)> sig_delegates;
     assert(sig_delegates.invoke_optional<int(int)>(5) == std::nullopt);

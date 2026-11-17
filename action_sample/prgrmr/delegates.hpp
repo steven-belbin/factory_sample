@@ -51,12 +51,12 @@ public:
    ///
    /// <param name="invocables">The invocables to initialize the delegates with.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
-            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
-   explicit delegates(TArgs&&... invocables)
-   : _delegates{ delegate<TInvocables>{ std::forward<TArgs>(invocables) }... }
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables) &&
+             !std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
+   explicit delegates(TOtherInvocables&&... invocables)
    {
+      (reset(std::forward<TOtherInvocables>(invocables)), ...);
    }
 
    ///
@@ -66,22 +66,22 @@ public:
    ///
    /// <param name="invocables_tuple">A tuple containing an invocable for each delegate.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
-   explicit delegates(std::tuple<TArgs...>&& invocables_tuple)
-   : _delegates{ [this]<std::size_t... Is>(std::tuple<TArgs...>&& t, std::index_sequence<Is...>) {
-        return std::make_tuple(delegate<TInvocables>{ std::get<Is>(std::move(t)) }...);
-     }(std::move(invocables_tuple), std::index_sequence_for<TInvocables...>{}) }
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
+   explicit delegates(std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
+      std::apply([this](auto&&... invocables) {
+         this->reset(std::forward<decltype(invocables)>(invocables)...);
+      }, std::move(invocables_tuple));
    }
 
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
-   explicit delegates(const std::tuple<TArgs...>& invocables_tuple)
-   : _delegates{ [this]<std::size_t... Is>(const std::tuple<TArgs...>& t, std::index_sequence<Is...>) {
-        return std::make_tuple(delegate<TInvocables>{ std::get<Is>(t) }...);
-     }(invocables_tuple, std::index_sequence_for<TInvocables...>{}) }
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
+   explicit delegates(const std::tuple<TOtherInvocables...>& invocables_tuple)
    {
+      std::apply([this](const auto&... invocables) {
+         this->reset(invocables...);
+      }, invocables_tuple);
    }
 
    ///
@@ -98,15 +98,15 @@ public:
 
    ///
    /// <summary>
-   ///   Resets all delegates with the provided invocables.
+   ///   Resets delegates that match each of the provided invocables.
    /// </summary>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TInvocables) > 1 && sizeof...(TArgs) == sizeof...(TInvocables)) &&
-            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
-   void reset(TArgs&&... invocables)
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (concepts::arguments::IsAtLeast<2, TOtherInvocables...> &&
+             !std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
+   void reset(TOtherInvocables&&... invocables)
    {
-      _delegates = std::make_tuple(delegate<TInvocables>{ std::forward<TArgs>(invocables) }...);
+      (reset(std::forward<TOtherInvocables>(invocables)), ...);
    }
 
    ///
@@ -116,13 +116,13 @@ public:
    ///
    /// <param name="invocable">The invocable to register.</param>
    ///
-   template<typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
-             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
-   void reset(TTargetInvocable&& invocable)
+   template<concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TOtherInvocable>, delegates_type>)
+   void reset(TOtherInvocable&& invocable)
    {
-      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TTargetInvocable, TInvocables...>();
-      get<index>().reset(std::forward<TTargetInvocable>(invocable));
+      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TOtherInvocable, TInvocables...>();
+      get<index>().reset(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -130,13 +130,24 @@ public:
    ///   Resets all delegates with a tuple of invocables.
    /// </summary>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
-   void reset(std::tuple<TArgs...>&& invocables_tuple)
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
+   void reset(std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
-      _delegates = [this]<std::size_t... Is>(std::tuple<TArgs...>&& t, std::index_sequence<Is...>) {
-         return std::make_tuple(delegate<TInvocables>{ std::get<Is>(std::move(t)) }...);
-      }(std::move(invocables_tuple), std::index_sequence_for<TInvocables...>{});
+      std::apply([this](auto&&... invocables)
+      {
+         this->reset(std::forward<decltype(invocables)>(invocables)...);
+      }, std::move(invocables_tuple));
+   }
+
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
+   void reset(const std::tuple<TOtherInvocables...>& invocables_tuple)
+   {
+      std::apply([this](const auto&... invocables)
+      {
+         this->reset(invocables...);
+      }, invocables_tuple);
    }
 
    ///
@@ -163,6 +174,7 @@ public:
    const auto& get() const
    {
       constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
+
       static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
 
       return std::get<index>(_delegates);
@@ -179,6 +191,7 @@ public:
    auto& get()
    {
       constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
+
       static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
 
       return std::get<index>(_delegates);
@@ -228,11 +241,11 @@ public:
    ///
    /// <param name="invocable">The invocable to register.</param>
    ///
-   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
-   void reset(TTargetInvocable&& invocable)
+   template<concepts::invocable::Invocable TInvocable, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
+   void reset(TOtherInvocable&& invocable)
    {
-      get<TInvocable>().reset(std::forward<TTargetInvocable>(invocable));
+      get<TInvocable>().reset(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -253,11 +266,11 @@ public:
    ///
    /// <param name="invocable">The invocable to register.</param>
    ///
-   template<std::size_t TIndex, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
-   void reset(TTargetInvocable&& invocable)
+   template<std::size_t TIndex, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
+   void reset(TOtherInvocable&& invocable)
    {
-      get<TIndex>().reset(std::forward<TTargetInvocable>(invocable));
+      get<TIndex>().reset(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -273,7 +286,7 @@ public:
    auto invoke(TParameters&&... parameters) const
    {
       static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
-                    "The provided parameters do not match the requested delegate signature.");
+                    "The provided parameters does not match the requested delegate signature.");
 
       if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
       {
@@ -290,7 +303,7 @@ public:
    auto invoke(TParameters&&... parameters) const
    {
       static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
-                    "No matching delegate found in delegates for the provided parameters.");
+                    "The provided parameters does not match any of the requested delegate signature.");
 
       if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
       {
@@ -324,8 +337,9 @@ public:
    auto invoke(TParameters&&... parameters) const
    {
       using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
+
       static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
-                    "The provided parameters do not match the delegate signature at the specified index.");
+                    "The provided parameters does not match the delegate signature at the specified index.");
 
       if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
       {
@@ -350,7 +364,7 @@ public:
    auto invoke_optional(TParameters&&... parameters) const
    {
       static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
-                    "The provided parameters do not match the requested delegate signature.");
+                    "The provided parameters does not match the requested delegate signature.");
 
       if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
       {
@@ -374,7 +388,7 @@ public:
    auto invoke_optional(TParameters&&... parameters) const
    {
       static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
-                    "No matching delegate found in delegates for the provided parameters.");
+                    "The provided parameters does not match any of the requested delegate signature.");
 
       if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
       {
@@ -401,8 +415,9 @@ public:
    auto invoke_optional(TParameters&&... parameters) const
    {
       using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
+
       static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
-                    "The provided parameters do not match the delegate signature at the specified index.");
+                    "The provided parameters does not match the delegate signature at the specified index.");
 
       if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
       {

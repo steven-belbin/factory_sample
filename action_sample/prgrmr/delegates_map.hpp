@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./delegates.hpp"
+#include "./concepts/arguments.hpp"
 #include "./concepts/invocable.hpp"
 #include <cstddef>
 #include <unordered_map>
@@ -109,13 +110,13 @@ public:
    /// <param name="key">The unique identifying key to associate with these function signatures.</param>
    /// <param name="invocables">The invocables that are to be registered as delegate under this key.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TInvocables) > 1 && sizeof...(TArgs) == sizeof...(TInvocables)) &&
-            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (concepts::arguments::IsNotEmpty<TOtherInvocables...> &&
+             !std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
    void reset(const key_type& key,
-              TArgs&&... invocables)
+              TOtherInvocables&&... invocables)
    {
-      _delegates.insert_or_assign(key, delegates_type{ std::forward<TArgs>(invocables)... });
+      _delegates[key].reset(std::forward<TOtherInvocables>(invocables)...);
    }
 
    ///
@@ -126,14 +127,15 @@ public:
    /// <param name="key">The unique identifying key.</param>
    /// <param name="invocable">The invocable to register.</param>
    ///
-   template<typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
-             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
+   template<concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TOtherInvocable>, delegates_type>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
-      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TTargetInvocable, TInvocables...>();
-      reset<index>(key, std::forward<TTargetInvocable>(invocable));
+      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TOtherInvocable, TInvocables...>();
+
+      reset<index>(key, std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -144,18 +146,18 @@ public:
    /// <param name="key">The unique identifying key.</param>
    /// <param name="invocables_tuple">The tuple of invocables.</param>
    ///
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
-              std::tuple<TArgs...>&& invocables_tuple)
+              std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
       _delegates.insert_or_assign(key, delegates_type{ std::move(invocables_tuple) });
    }
 
-   template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables))
+   template<concepts::invocable::Invocable... TOtherInvocables>
+   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    void reset(const key_type& key,
-              const std::tuple<TArgs...>& invocables_tuple)
+              const std::tuple<TOtherInvocables...>& invocables_tuple)
    {
       _delegates.insert_or_assign(key, delegates_type{ invocables_tuple });
    }
@@ -168,13 +170,13 @@ public:
    /// <param name="key">The unique identifying key to associate with this function.</param>
    /// <param name="invocable">The function that is to be registered.</param>
    ///
-   template<concepts::invocable::Invocable TInvocable, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   template<concepts::invocable::Invocable TInvocable, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
       _delegates[key].template
-      reset<TInvocable>(std::forward<TTargetInvocable>(invocable));
+        reset<TInvocable>(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -185,13 +187,13 @@ public:
    /// <param name="key">The unique identifying key to associate with this function.</param>
    /// <param name="invocable">The function that is to be registered.</param>
    ///
-   template<size_t TIndex, typename TTargetInvocable>
-   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t>)
+   template<size_t TIndex, concepts::invocable::Invocable TOtherInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t>)
    void reset(const key_type& key,
-              TTargetInvocable&& invocable)
+              TOtherInvocable&& invocable)
    {
       _delegates[key].template
-      reset<TIndex>(std::forward<TTargetInvocable>(invocable));
+        reset<TIndex>(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -277,7 +279,7 @@ public:
                          TParameters&&... parameters) const
    {
       return at(key).template
-             invoke<TInvocable>(std::forward<TParameters>(parameters)...);
+               invoke<TInvocable>(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -297,7 +299,7 @@ public:
                          TParameters&&... parameters) const
    {
       return at(key).template
-             invoke<TIndex>(std::forward<TParameters>(parameters)...);
+               invoke<TIndex>(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -340,7 +342,8 @@ public:
    {
        using invocable_type = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
 
-       return invoke_optional<invocable_type>(key, std::forward<TParameters>(parameters)...);
+       return invoke_optional<invocable_type>(key,
+                                              std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -361,7 +364,8 @@ public:
       const auto delegate = get(key);
       
       return (delegate != nullptr)
-           ? delegate->template invoke_optional<TIndex>(std::forward<TParameters>(parameters)...)
+           ? delegate->template
+               invoke_optional<TIndex>(std::forward<TParameters>(parameters)...)
            : std::nullopt;
    }
 
