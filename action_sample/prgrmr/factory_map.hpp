@@ -18,7 +18,7 @@ namespace prgrmr
 ///
 /// <seealso cref="delegates_map"/>
 ///
-template<typename TKey, concepts::invocable::Invocable... TInvocables>
+template<typename TClass, typename TKey, concepts::invocable::Invocable... TInvocables>
 requires concepts::invocable::IsSameResultType<TInvocables...>
 class factory_map final
 {

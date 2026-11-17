@@ -44,6 +44,7 @@ void configure_shoe_factory(shoe_factory& factory,
           {
             return std::make_unique<TClass>();
           },
+
           [](int x, double y)
           {
             return std::make_unique<TClass>(x, y);
@@ -58,6 +59,7 @@ void configure_shoe_factory(shoe_factory& factory,
           {
             return std::make_unique<TClass>();
           },
+
           [&factory, key]([[maybe_unused]] int x, [[maybe_unused]] double y)
           {
             return factory.make(key);
@@ -72,6 +74,7 @@ void configure_shoe_factory(shoe_factory& factory,
           {
             return factory.make(key, 0, 0.0);
           },
+
           [](int x, double y)
           {
             return std::make_unique<TClass>(x, y);
@@ -105,6 +108,7 @@ void configure_shoe_factory<runner>(shoe_factory& factory,
      {
         return std::make_unique<runner>();        
      },
+
      []([maybe_unused] int, [maybe_unused] double)
      {
         return std::make_unique<runner>();

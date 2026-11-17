@@ -2,14 +2,13 @@
 
 #include "shoe.h"
 #include <prgrmr/factory_map.hpp>
-#include <functional>
 #include <memory>
 #include <string>
 
 namespace nike
 {
-using base_constructor     = std::function<std::unique_ptr<shoe> ()>;
-using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
+// using base_constructor     = std::function<std::unique_ptr<shoe> ()>;
+// using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
 
 /// #region "Factory Documentation"
 /// <summary>
@@ -50,7 +49,8 @@ using numerics_constructor = std::function<std::unique_ptr<shoe> (int, float)>;
 /// #endregion
 
 using shoe_factory =
-      prgrmr::factory_map<std::string,
-                          base_constructor,
-                          numerics_constructor>;
+      prgrmr::factory_map<shoe,
+                          std::string,
+                          std::unique_ptr<shoe> (),
+                          std::unique_ptr<shoe> (int, float)>;
 }
