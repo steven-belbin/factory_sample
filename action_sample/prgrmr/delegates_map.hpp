@@ -110,12 +110,30 @@ public:
    /// <param name="invocables">The invocables that are to be registered as delegate under this key.</param>
    ///
    template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+   requires (sizeof...(TInvocables) > 1 && sizeof...(TArgs) == sizeof...(TInvocables)) &&
             (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
    void reset(const key_type& key,
               TArgs&&... invocables)
    {
       _delegates.insert_or_assign(key, delegates_type{ std::forward<TArgs>(invocables)... });
+   }
+
+   ///
+   /// <summary>
+   ///   Resets the delegate matching the provided invocable under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key.</param>
+   /// <param name="invocable">The invocable to register.</param>
+   ///
+   template<typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
+   {
+      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TTargetInvocable, TInvocables...>();
+      reset<index>(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///

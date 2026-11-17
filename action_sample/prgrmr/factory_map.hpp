@@ -114,12 +114,29 @@ public:
    /// <param name="invocables">The invocables that are to be registered.</param>
    ///
    template<typename... TOtherInvocables>
-   requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables)) &&
+   requires (sizeof...(TInvocables) > 1 && sizeof...(TOtherInvocables) == sizeof...(TInvocables)) &&
             (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
    void reset(const key_type& key,
               TOtherInvocables&&... invocables)
    {
       _delegates_map.reset(key, std::forward<TOtherInvocables>(invocables)...);
+   }
+
+   ///
+   /// <summary>
+   ///   Resets the delegate matching the provided invocable under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key.</param>
+   /// <param name="invocable">The invocable to register.</param>
+   ///
+   template<typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
+   void reset(const key_type& key,
+              TTargetInvocable&& invocable)
+   {
+      _delegates_map.reset(key, std::forward<TTargetInvocable>(invocable));
    }
 
    ///

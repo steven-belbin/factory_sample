@@ -102,11 +102,27 @@ public:
    /// </summary>
    ///
    template<typename... TArgs>
-   requires (sizeof...(TArgs) == sizeof...(TInvocables)) &&
+   requires (sizeof...(TInvocables) > 1 && sizeof...(TArgs) == sizeof...(TInvocables)) &&
             (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TArgs...>>>, delegates_type>)
    void reset(TArgs&&... invocables)
    {
       _delegates = std::make_tuple(delegate<TInvocables>{ std::forward<TArgs>(invocables) }...);
+   }
+
+   ///
+   /// <summary>
+   ///   Resets the delegate that matches the provided invocable.
+   /// </summary>
+   ///
+   /// <param name="invocable">The invocable to register.</param>
+   ///
+   template<typename TTargetInvocable>
+   requires (!std::same_as<std::remove_cvref_t<TTargetInvocable>, std::nullptr_t> &&
+             !std::same_as<std::remove_cvref_t<TTargetInvocable>, delegates_type>)
+   void reset(TTargetInvocable&& invocable)
+   {
+      constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TTargetInvocable, TInvocables...>();
+      get<index>().reset(std::forward<TTargetInvocable>(invocable));
    }
 
    ///

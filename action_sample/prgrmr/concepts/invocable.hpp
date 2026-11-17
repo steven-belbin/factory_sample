@@ -173,6 +173,34 @@ namespace detail
 
         return count;
     }
+
+    ///
+    /// <summary>
+    ///   Finds the index of the delegate constructible from the target callable.
+    /// </summary>
+    ///
+    template<typename TTargetCallable, typename... TInvocables>
+    consteval std::size_t find_matching_delegate_index()
+    {
+        constexpr bool matches[] = {
+            std::is_constructible_v<std::function<invocable_signature_type<TInvocables>>, TTargetCallable>...
+        };
+        constexpr std::size_t match_count = ((std::is_constructible_v<std::function<invocable_signature_type<TInvocables>>, TTargetCallable> ? 1 : 0) + ...);
+
+        static_assert(match_count > 0, "No delegate matches the provided invocable.");
+        static_assert(match_count <= 1, "Ambiguous call: multiple delegates match the provided invocable. Specify the signature or index explicitly.");
+
+        constexpr std::size_t count = sizeof...(TInvocables);
+        for (std::size_t index = 0; index < count; ++index)
+        {
+            if (matches[index])
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
 }
 
 template<typename TInvocable>
@@ -245,6 +273,17 @@ template<typename TTarget, typename... TInvocables>
 consteval std::size_t find_delegate_index()
 {
     return detail::find_delegate_index<TTarget, TInvocables...>();
+}
+
+///
+/// <summary>
+///   Finds the index of the delegate constructible from the target callable.
+/// </summary>
+///
+template<typename TTargetCallable, typename... TInvocables>
+consteval std::size_t find_matching_delegate_index()
+{
+    return detail::find_matching_delegate_index<TTargetCallable, TInvocables...>();
 }
 
 ///

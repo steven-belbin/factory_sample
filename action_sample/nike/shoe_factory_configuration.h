@@ -55,7 +55,7 @@ void register_constructors(shoe_factory& factory,
 
     if constexpr (std::default_initializable<T>)
     {
-        factory.reset<base_constructor>(key, std::make_unique<T>);
+        factory.reset(key, []() { return std::make_unique<T>(); });
         std::cout << "Registered the 'default initializable' constructor.\n";
 
         if constexpr (!std::constructible_from<T, int, float>)
@@ -63,14 +63,14 @@ void register_constructors(shoe_factory& factory,
             auto fun = [&factory, key]([[maybe_unused]] int a, [[maybe_unused]] float b)
                  { return factory.make(key); };
 
-            factory.reset<numerics_constructor>(key, std::move(fun));
+            factory.reset(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'numerics' constructor.\n";
         }
     }
 
     if constexpr (std::constructible_from<T, int, double>)
     {
-        factory.reset<numerics_constructor>(key, std::make_unique<T, int, float>);
+        factory.reset(key, [](int a, float b) { return std::make_unique<T>(a, b); });
         std::cout << "Registered the 'numerics' constructor.\n";
 
         if constexpr (!std::default_initializable<T>)
@@ -78,7 +78,7 @@ void register_constructors(shoe_factory& factory,
             auto fun = [&factory, key]()
                  { return factory.make(key, 0, 0.0f); };
 
-            factory.reset<base_constructor>(key, std::move(fun));
+            factory.reset(key, std::move(fun));
             std::cout << "Registered an adaptor for the 'default initializable' constructor.\n";
         }
     }
