@@ -10,9 +10,11 @@ namespace prgrmr
 {
 ///
 /// <summary>
-///   The delegates_map class allows to register a collection of delegates.
-///   <para>Each delegate is identified by a unique key identifier.</para>
-///   <para>When a delegate is found, it is then possible to invoke the corresponding invocable that matches the given function signature.</para>
+///   A collection of delegates that are associated by key.
+///
+///   Allows applications at runtime to provide a key & configure
+///   that key's delegates so that application logic can invoke the
+///   appropriate delegate that matches key.
 /// </summary>
 ///
 template<typename TKey, concepts::invocable::Invocable... TInvocables>

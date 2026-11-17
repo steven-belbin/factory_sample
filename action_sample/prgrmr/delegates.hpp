@@ -12,15 +12,14 @@ namespace prgrmr
 {
 ///
 /// <summary>
-///   Contains one to many delegates which can be registered and unregistered at runtime.
+///   Contains one to many delegates that can be configured at runtime.
 /// </summary>
 ///
 template<concepts::invocable::Invocable... TInvocables>
+requires concepts::arguments::IsNotEmpty<TInvocables...>
 class delegates final
 {
 public:
-   static_assert(concepts::arguments::IsNotEmpty<TInvocables...>, "The argument list cannot be empty.");
-
    using delegates_type = std::tuple<delegate<TInvocables>...>;
 
    delegates() = default;
@@ -70,7 +69,8 @@ public:
    requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    explicit delegates(std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
-      std::apply([this](auto&&... invocables) {
+      std::apply([this](auto&&... invocables)
+      {
          this->reset(std::forward<decltype(invocables)>(invocables)...);
       }, std::move(invocables_tuple));
    }
@@ -79,7 +79,8 @@ public:
    requires (sizeof...(TOtherInvocables) == sizeof...(TInvocables))
    explicit delegates(const std::tuple<TOtherInvocables...>& invocables_tuple)
    {
-      std::apply([this](const auto&... invocables) {
+      std::apply([this](const auto&... invocables)
+      {
          this->reset(invocables...);
       }, invocables_tuple);
    }
@@ -122,6 +123,7 @@ public:
    void reset(TOtherInvocable&& invocable)
    {
       constexpr std::size_t index = concepts::invocable::detail::find_matching_delegate_index<TOtherInvocable, TInvocables...>();
+
       get<index>().reset(std::forward<TOtherInvocable>(invocable));
    }
 
@@ -175,8 +177,6 @@ public:
    {
       constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
 
-      static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
-
       return std::get<index>(_delegates);
    }
 
@@ -191,8 +191,6 @@ public:
    auto& get()
    {
       constexpr std::size_t index = concepts::invocable::detail::find_delegate_index<TInvocable, TInvocables...>();
-
-      static_assert(index < sizeof...(TInvocables), "No matching delegate found for the requested signature.");
 
       return std::get<index>(_delegates);
    }
@@ -283,15 +281,10 @@ public:
    /// <exception cref="std::bad_function_call">When the delegate has not been registered.</exception>
    ///
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   requires concepts::invocable::CanInvoke<TInvocable, TParameters...>
    auto invoke(TParameters&&... parameters) const
    {
-      static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
-                    "The provided parameters does not match the requested delegate signature.");
-
-      if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
-      {
-         return get<TInvocable>().invoke(std::forward<TParameters>(parameters)...);
-      }
+      return get<TInvocable>().invoke(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -300,17 +293,12 @@ public:
    /// </summary>
    ///
    template<typename... TParameters>
+   requires concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>
    auto invoke(TParameters&&... parameters) const
    {
-      static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
-                    "The provided parameters does not match any of the requested delegate signature.");
+      using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
 
-      if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
-      {
-         using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
-
-         return invoke<TInvocable>(std::forward<TParameters>(parameters)...);
-      }
+      return invoke<TInvocable>(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -319,6 +307,7 @@ public:
    /// </summary>
    ///
    template<typename... TParameters>
+   requires concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>
    auto operator()(TParameters&&... parameters) const
    {
       return invoke(std::forward<TParameters>(parameters)...);
@@ -334,17 +323,10 @@ public:
    /// <exception cref="std::bad_function_call">When the delegate has not been registered.</exception>
    ///
    template<std::size_t TIndex, typename... TParameters>
+   requires concepts::invocable::CanInvoke<std::tuple_element_t<TIndex, std::tuple<TInvocables...>>, TParameters...>
    auto invoke(TParameters&&... parameters) const
    {
-      using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
-
-      static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
-                    "The provided parameters does not match the delegate signature at the specified index.");
-
-      if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
-      {
-         return get<TIndex>().invoke(std::forward<TParameters>(parameters)...);
-      }
+      return get<TIndex>().invoke(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -360,16 +342,11 @@ public:
    /// </returns>
    ///
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
-   requires concepts::invocable::InvocableWithResult<TInvocable>
+   requires concepts::invocable::InvocableWithResult<TInvocable> &&
+            concepts::invocable::CanInvoke<TInvocable, TParameters...>
    auto invoke_optional(TParameters&&... parameters) const
    {
-      static_assert(concepts::invocable::CanInvoke<TInvocable, TParameters...>,
-                    "The provided parameters does not match the requested delegate signature.");
-
-      if constexpr (concepts::invocable::CanInvoke<TInvocable, TParameters...>)
-      {
-         return get<TInvocable>().invoke_optional(std::forward<TParameters>(parameters)...);
-      }
+      return get<TInvocable>().invoke_optional(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -385,17 +362,12 @@ public:
    /// </returns>
    ///
    template<typename... TParameters>
+   requires concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>
    auto invoke_optional(TParameters&&... parameters) const
    {
-      static_assert(concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>,
-                    "The provided parameters does not match any of the requested delegate signature.");
+      using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
 
-      if constexpr (concepts::invocable::CanInvokeAny<std::tuple<TParameters...>, TInvocables...>)
-      {
-         using TInvocable = concepts::invocable::find_invocable_type<std::tuple<TParameters...>, TInvocables...>;
-
-         return invoke_optional<TInvocable>(std::forward<TParameters>(parameters)...);
-      }
+      return invoke_optional<TInvocable>(std::forward<TParameters>(parameters)...);
    }
 
    ///
@@ -411,18 +383,11 @@ public:
    /// </returns>
    ///
    template<std::size_t TIndex, typename... TParameters>
-   requires concepts::invocable::InvocableWithResult<std::tuple_element_t<TIndex, std::tuple<TInvocables...>>>
+   requires concepts::invocable::InvocableWithResult<std::tuple_element_t<TIndex, std::tuple<TInvocables...>>> &&
+            concepts::invocable::CanInvoke<std::tuple_element_t<TIndex, std::tuple<TInvocables...>>, TParameters...>
    auto invoke_optional(TParameters&&... parameters) const
    {
-      using target_invocable = std::tuple_element_t<TIndex, std::tuple<TInvocables...>>;
-
-      static_assert(concepts::invocable::CanInvoke<target_invocable, TParameters...>,
-                    "The provided parameters does not match the delegate signature at the specified index.");
-
-      if constexpr (concepts::invocable::CanInvoke<target_invocable, TParameters...>)
-      {
-         return get<TIndex>().invoke_optional(std::forward<TParameters>(parameters)...);
-      }
+      return get<TIndex>().invoke_optional(std::forward<TParameters>(parameters)...);
    }
 
    ///

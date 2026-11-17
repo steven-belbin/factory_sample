@@ -9,25 +9,20 @@ namespace prgrmr
 {
 ///
 /// <summary>
-///   The factory_map class allows to construct a class instance by a key.
-///   <para>The class factory has 0..n entries in which each entry is identified by a unique key.</para>
-///   <para>Any given entry can construct a class using any one of delegates, each with different number of arguments and different argument types.</para>
+///   A collection of factories that are associated by key.
+///
+///   Allows applications at runtime to provide a key & configure
+///   that key's factory so that application logic can create the
+///   appropriate instance that matches key.
 /// </summary>
 ///
-/// <seealso cref="key_delegates_functions"/>
+/// <seealso cref="delegates_map"/>
 ///
 template<typename TKey, concepts::invocable::Invocable... TInvocables>
+requires concepts::invocable::IsSameResultType<TInvocables...>
 class factory_map final
 {
 public:
-   static_assert(concepts::arguments::IsNotEmpty<TInvocables...>, "The argument list cannot be empty.");
-
-   static_assert(concepts::invocable::IsSameResultType<TInvocables...>,
-                 "The argument list contains at least one delegate doesn't return the same type.");
-
-   static_assert(concepts::invocable::AreInvocablesSignaturesUnique<TInvocables...>,
-                 "The argument list contains at least one pair of delegates having the same signature.");
-
    using delegates_map_type = delegates_map<TKey, TInvocables...>;
    using delegates_type = delegates_map_type::delegates_type;
    using key_type = delegates_map_type::key_type;
@@ -114,7 +109,7 @@ public:
    /// <param name="invocables">The invocables that are to be registered.</param>
    ///
    template<concepts::invocable::Invocable... TOtherInvocables>
-   requires (concepts::arguments::IsNotEmpty<TOtherInvocables...>) &&
+   requires concepts::arguments::IsNotEmpty<TOtherInvocables...> &&
             (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
    void reset(const key_type& key,
               TOtherInvocables&&... invocables)
@@ -267,8 +262,8 @@ public:
              TParameters&&... parameters) const
    {
       return _delegates_map.template
-             invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
-             .value_or(nullptr);
+               invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
+               .value_or(nullptr);
    }
 
    ///
@@ -300,8 +295,8 @@ public:
              TParameters&&... parameters) const
    {
       return _delegates_map.template
-             invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)
-             .value_or(nullptr);
+               invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)
+               .value_or(nullptr);
    }
 
    ///

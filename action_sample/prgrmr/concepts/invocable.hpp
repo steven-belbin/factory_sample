@@ -1,7 +1,9 @@
 #pragma once
 
 #include "./arguments.hpp"
+#include <algorithm>
 #include <concepts>
+#include <cstddef>
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -118,23 +120,19 @@ namespace detail
     template<typename... TInvocables, typename... TParameters>
     consteval std::size_t find_invocable_index(std::tuple<TParameters...>* = nullptr)
     {
-        constexpr std::size_t match_count = ((std::is_invocable_v<TInvocables, TParameters...> ? 1 : 0) + ...);
-
-        static_assert(match_count > 0, "No matching function found for the provided arguments.");
-        static_assert(match_count <= 1, "Ambiguous call: multiple matching functions found for the provided arguments.");
-
-        constexpr bool matches[] = { std::is_invocable_v<TInvocables, TParameters...>... };
-        constexpr std::size_t count = sizeof...(TInvocables);
-
-        for (std::size_t index = 0; index < count; ++index)
+        constexpr bool matches[] =
         {
-            if (matches[index])
-            {
-                return index;
-            }
-        }
+            std::is_invocable_v<TInvocables, TParameters...>...
+        };
 
-        return 0;
+        constexpr std::size_t match_count = std::ranges::count(matches, true);        
+
+        static_assert(match_count > 0, "The parameters signature does not match any of the invocables.");
+        static_assert(match_count <= 1, "The parameters signature matches multiple of the invocables.");
+
+        return std::ranges::distance(
+                 std::ranges::begin(matches),
+                 std::ranges::find(matches, true));
     }
 
     template<typename TParameters, typename... TInvocables>
@@ -153,25 +151,24 @@ namespace detail
     ///   Finds the index of the invocable matching the target type or signature.
     /// </summary>
     ///
-    template<typename TTarget, typename... TInvocables>
+    template<typename TInvocable, typename... TInvocables>
     consteval std::size_t find_delegate_index()
     {
-        constexpr bool matches[] = {
-            (std::same_as<TTarget, TInvocables> ||
-             std::same_as<invocable_signature_type<TTarget>,
+        constexpr bool matches[] =
+        {
+            (std::same_as<TInvocable, TInvocables> ||
+             std::same_as<invocable_signature_type<TInvocable>,
                           invocable_signature_type<TInvocables>>)...
         };
-        constexpr std::size_t count = sizeof...(TInvocables);
 
-        for (std::size_t index = 0; index < count; ++index)
-        {
-            if (matches[index])
-            {
-                return index;
-            }
-        }
+        constexpr std::size_t match_count = std::ranges::count(matches, true);    
 
-        return count;
+        static_assert(match_count > 0, "The invocable does not match any of the invocables.");
+        static_assert(match_count <= 1, "The invocable matches multiple of the invocables.");
+
+        return std::ranges::distance(
+                 std::ranges::begin(matches),
+                 std::ranges::find(matches, true));
     }
 
     ///
@@ -179,27 +176,22 @@ namespace detail
     ///   Finds the index of the delegate constructible from the target callable.
     /// </summary>
     ///
-    template<typename TTargetCallable, typename... TInvocables>
+    template<typename TInvocable, typename... TInvocables>
     consteval std::size_t find_matching_delegate_index()
     {
-        constexpr bool matches[] = {
-            std::is_constructible_v<std::function<invocable_signature_type<TInvocables>>, TTargetCallable>...
-        };
-        constexpr std::size_t match_count = ((std::is_constructible_v<std::function<invocable_signature_type<TInvocables>>, TTargetCallable> ? 1 : 0) + ...);
-
-        static_assert(match_count > 0, "No delegate matches the provided invocable.");
-        static_assert(match_count <= 1, "Ambiguous call: multiple delegates match the provided invocable. Specify the signature or index explicitly.");
-
-        constexpr std::size_t count = sizeof...(TInvocables);
-        for (std::size_t index = 0; index < count; ++index)
+        constexpr bool matches[] =
         {
-            if (matches[index])
-            {
-                return index;
-            }
-        }
+            std::is_constructible_v<std::function<invocable_signature_type<TInvocables>>, TInvocable>...
+        };
 
-        return 0;
+        constexpr std::size_t match_count = std::ranges::count(matches, true);        
+
+        static_assert(match_count > 0, "The invocable does not match any of the invocables.");
+        static_assert(match_count <= 1, "The invocable matches multiple of the invocables.");
+
+        return std::ranges::distance(
+                 std::ranges::begin(matches),
+                 std::ranges::find(matches, true));        
     }
 }
 
@@ -266,13 +258,13 @@ using find_invocable_type = typename detail::find_invocable<TParameters, TInvoca
 
 ///
 /// <summary>
-///   Finds the index of the invocable matching the target type or signature.
+///   Finds the index of the invocable that matches the set of invocables.
 /// </summary>
 ///
-template<typename TTarget, typename... TInvocables>
+template<typename TInvocable, typename... TInvocables>
 consteval std::size_t find_delegate_index()
 {
-    return detail::find_delegate_index<TTarget, TInvocables...>();
+    return detail::find_delegate_index<TInvocable, TInvocables...>();
 }
 
 ///
@@ -280,10 +272,10 @@ consteval std::size_t find_delegate_index()
 ///   Finds the index of the delegate constructible from the target callable.
 /// </summary>
 ///
-template<typename TTargetCallable, typename... TInvocables>
+template<typename TInvocable, typename... TInvocables>
 consteval std::size_t find_matching_delegate_index()
 {
-    return detail::find_matching_delegate_index<TTargetCallable, TInvocables...>();
+    return detail::find_matching_delegate_index<TInvocable, TInvocables...>();
 }
 
 ///
