@@ -32,8 +32,9 @@ template<typename... TInvocables>
 concept valid_product_factory = requires { typename factory_map<factory_product, std::string, TInvocables...>; };
 
 static_assert(valid_product_factory<factory_product*(), factory_product*(int)>);
+static_assert(valid_product_factory<std::unique_ptr<factory_product>()>);
+static_assert(valid_product_factory<std::shared_ptr<factory_product>()>);
 static_assert(!valid_product_factory<>);
-static_assert(!valid_product_factory<std::unique_ptr<factory_product>()>);
 static_assert(!valid_product_factory<int*()>);
 
 void test_factory_map()
@@ -107,6 +108,39 @@ void test_factory_map()
     }
     catch (const std::runtime_error&)
     {
+    }
+
+    // Test factory_map with std::unique_ptr return type
+    using unique_signature = std::unique_ptr<factory_product>();
+    factory_map<factory_product, std::string, unique_signature> unique_factory;
+    unique_factory.reset<unique_signature>("active", [&destroyed]() {
+        return std::make_unique<factory_product>(42, destroyed);
+    });
+    static_assert(std::same_as<decltype(unique_factory.make("active")), std::unique_ptr<factory_product>>);
+    static_assert(std::same_as<decltype(unique_factory.make_unique("active")), std::unique_ptr<factory_product>>);
+    static_assert(std::same_as<decltype(unique_factory.make_shared("active")), std::shared_ptr<factory_product>>);
+    {
+        auto u = unique_factory.make("active");
+        assert(u != nullptr && u->value == 42);
+        auto u2 = unique_factory.make_unique("active");
+        assert(u2 != nullptr && u2->value == 42);
+        auto s = unique_factory.make_shared("active");
+        assert(s != nullptr && s->value == 42);
+    }
+
+    // Test factory_map with std::shared_ptr return type
+    using shared_signature = std::shared_ptr<factory_product>();
+    factory_map<factory_product, std::string, shared_signature> shared_factory;
+    shared_factory.reset<shared_signature>("active", [&destroyed]() {
+        return std::make_shared<factory_product>(84, destroyed);
+    });
+    static_assert(std::same_as<decltype(shared_factory.make("active")), std::shared_ptr<factory_product>>);
+    static_assert(std::same_as<decltype(shared_factory.make_shared("active")), std::shared_ptr<factory_product>>);
+    {
+        auto s = shared_factory.make("active");
+        assert(s != nullptr && s->value == 84);
+        auto s2 = shared_factory.make_shared("active");
+        assert(s2 != nullptr && s2->value == 84);
     }
 }
 
