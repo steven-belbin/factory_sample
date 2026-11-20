@@ -354,33 +354,37 @@ public:
    }
 
 private:
-   template<typename TInstance>
-   static auto to_unique(TInstance&& instance)
+   static auto to_unique(auto instance)
    {
-      if constexpr (std::same_as<std::decay_t<TInstance>, std::unique_ptr<TClass>>)
+      using instance_type = decltype(instance);
+
+      if constexpr (std::same_as<instance_type, std::unique_ptr<TClass>>)
       {
-         return std::forward<TInstance>(instance);
+         return instance;
       }
       else
       {
-         return std::unique_ptr<TClass>{ std::forward<TInstance>(instance) };
+         return std::unique_ptr<TClass>{ instance };
       }
    }
 
-   template<typename TInstance>
-   static auto to_shared(TInstance&& instance)
+   static auto to_shared(auto instance)
    {
-      if constexpr (std::same_as<std::decay_t<TInstance>, std::shared_ptr<TClass>>)
+      using instance_type = decltype(instance);
+
+      if constexpr (std::same_as<instance_type, std::shared_ptr<TClass>>)
       {
-         return std::forward<TInstance>(instance);
+         return instance;
       }
-      else if constexpr (std::same_as<std::decay_t<TInstance>, std::unique_ptr<TClass>>)
+      else if constexpr (std::same_as<instance_type, std::unique_ptr<TClass>>)
       {
-         return std::shared_ptr<TClass>{ std::forward<TInstance>(instance) };
+         return std::shared_ptr<TClass>{ std::move(instance) };
       }
       else
       {
-         return std::shared_ptr<TClass>{ std::unique_ptr<TClass>{ std::forward<TInstance>(instance) } };
+         return (instance != nullptr)
+              ? std::shared_ptr<TClass>{ instance }
+              : nullptr;
       }
    }
 
