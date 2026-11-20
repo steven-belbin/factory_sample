@@ -42,12 +42,12 @@ void configure_shoe_factory(shoe_factory& factory,
         factory.reset(key,
           []()
           {
-            return std::make_unique<TClass>();
+            return new TClass();
           },
 
           [](int x, float y)
           {
-            return std::make_unique<TClass>(x, y);
+            return new TClass(x, y);
           });
 
         std::cout << "Registered the 'default initializable' & '(int, float)'.\n";
@@ -57,7 +57,7 @@ void configure_shoe_factory(shoe_factory& factory,
         factory.reset(key,
           []()
           {
-            return std::make_unique<TClass>();
+            return new TClass();
           },
 
           [&factory, key]([[maybe_unused]] int x, [[maybe_unused]] float y)
@@ -77,7 +77,7 @@ void configure_shoe_factory(shoe_factory& factory,
 
           [](int x, float y)
           {
-            return std::make_unique<TClass>(x, y);
+            return new TClass(x, y);
           });
 
         std::cout << "Registered the '(int, float)' with an adaptor for the 'default initializable'.\n";
@@ -106,12 +106,12 @@ void configure_shoe_factory<runner>(shoe_factory& factory,
    factory.reset(key,
      []()
      {
-        return std::make_unique<runner>();        
+        return new runner();
      },
 
-     []([maybe_unused] int, [maybe_unused] float)
+     [](int, float)
      {
-        return std::make_unique<runner>();
+        return new runner();
      });
 }
 

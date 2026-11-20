@@ -1,9 +1,12 @@
 #include <prgrmr/delegate.hpp>
 #include <prgrmr/delegates.hpp>
 #include <prgrmr/delegates_map.hpp>
+#include <prgrmr/factory_map.hpp>
 #include <prgrmr/concepts/concepts.hpp>
 #include <cassert>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 
 using namespace prgrmr;
@@ -16,8 +19,100 @@ inline constexpr void static_assert_invocable_concepts()
     static_assert(concepts::invocable::IsSameResultType<Invocables...>, "The list of invocables contains at least one entry whose result type is different from the rest.");
 }
 
+struct factory_product
+{
+    explicit factory_product(int value, int& destroyed) : value(value), destroyed(destroyed) {}
+    ~factory_product() { ++destroyed; }
+
+    int value;
+    int& destroyed;
+};
+
+template<typename... TInvocables>
+concept valid_product_factory = requires { typename factory_map<factory_product, std::string, TInvocables...>; };
+
+static_assert(valid_product_factory<factory_product*(), factory_product*(int)>);
+static_assert(!valid_product_factory<>);
+static_assert(!valid_product_factory<std::unique_ptr<factory_product>()>);
+static_assert(!valid_product_factory<int*()>);
+
+void test_factory_map()
+{
+    using default_signature = factory_product*();
+    using argument_signature = factory_product*(int, int&);
+    using move_signature = factory_product*(std::unique_ptr<int>);
+    factory_map<factory_product, std::string, default_signature, argument_signature, move_signature> factory;
+    static_assert(std::same_as<decltype(factory.make("active")), factory_product*>);
+    static_assert(std::same_as<decltype(factory.make_unique("active")), std::unique_ptr<factory_product>>);
+    static_assert(std::same_as<decltype(factory.make_shared("active")), std::shared_ptr<factory_product>>);
+    int destroyed = 0;
+    int argument = 2;
+
+    assert(factory.make("missing") == nullptr);
+    assert(factory.make<default_signature>("missing") == nullptr);
+    assert(factory.make<0>("missing") == nullptr);
+    assert(!factory.make_unique("missing"));
+    assert(!factory.make_unique<default_signature>("missing"));
+    assert(!factory.make_unique<0>("missing"));
+    assert(factory.make_shared("missing").use_count() == 0);
+    assert(factory.make_shared<default_signature>("missing").use_count() == 0);
+    assert(factory.make_shared<0>("missing").use_count() == 0);
+
+    factory.reset<default_signature>("active", [&destroyed]() { return new factory_product(1, destroyed); });
+    assert(factory.make("active", 3, argument) == nullptr);
+    assert(!factory.make_unique<argument_signature>("active", 3, argument));
+    assert(factory.make_shared<1>("active", 3, argument).use_count() == 0);
+    factory.reset<argument_signature>("active", [&destroyed](int value, int& ref)
+    {
+        ++ref;
+        return new factory_product(value + ref, destroyed);
+    });
+    factory.reset<move_signature>("active", [&destroyed](std::unique_ptr<int> value)
+    {
+        return new factory_product(*value, destroyed);
+    });
+
+    {
+        std::unique_ptr<factory_product> raw(factory.make("active"));
+        assert(raw && raw->value == 1);
+        std::unique_ptr<factory_product> typed(factory.make<argument_signature>("active", 3, argument));
+        assert(typed && typed->value == 6 && argument == 3);
+        std::unique_ptr<factory_product> indexed(factory.make<1>("active", 3, argument));
+        assert(indexed && indexed->value == 7 && argument == 4);
+        assert(factory.make_unique("active", std::make_unique<int>(8))->value == 8);
+        assert(factory.make_unique<default_signature>("active")->value == 1);
+        assert(factory.make_unique<1>("active", 3, argument)->value == 8 && argument == 5);
+        assert(factory.make_shared("active", std::make_unique<int>(9))->value == 9);
+        auto shared = factory.make_shared<default_signature>("active");
+        auto copy = shared;
+        assert(shared && shared->value == 1 && shared.use_count() == 2);
+        assert(factory.make_shared<1>("active", 3, argument)->value == 9 && argument == 6);
+    }
+    assert(destroyed == 9);
+    factory.reset<argument_signature>("active");
+    assert(factory.make<argument_signature>("active", 3, argument) == nullptr);
+    assert(!factory.make_unique<1>("active", 3, argument));
+    assert(factory.make_shared("active", 3, argument).use_count() == 0);
+
+    factory.reset<default_signature>("null", []() -> factory_product* { return nullptr; });
+    assert(factory.make("null") == nullptr);
+    assert(!factory.make_unique("null"));
+    assert(factory.make_shared("null").use_count() == 0);
+
+    factory.reset<default_signature>("throws", []() -> factory_product* { throw std::runtime_error("factory failure"); });
+    try
+    {
+        factory.make_shared("throws");
+        assert(false);
+    }
+    catch (const std::runtime_error&)
+    {
+    }
+}
+
 int main()
 {
+    test_factory_map();
     auto a = [](int x)   { return 10;       };
     auto b = [](int x)   { return 10 + x;   };
     auto c = [](float x) { return 10 + x;   };

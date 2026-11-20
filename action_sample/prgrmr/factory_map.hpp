@@ -4,6 +4,7 @@
 #include "./concepts/arguments.hpp"
 #include "./concepts/invocable.hpp"
 #include <cstddef>
+#include <memory>
 
 namespace prgrmr
 {
@@ -19,7 +20,8 @@ namespace prgrmr
 /// <seealso cref="delegates_map"/>
 ///
 template<typename TClass, typename TKey, concepts::invocable::Invocable... TInvocables>
-requires concepts::invocable::IsSameResultType<TInvocables...>
+requires concepts::arguments::IsNotEmpty<TInvocables...> &&
+         (std::same_as<concepts::invocable::invocable_result_type<TInvocables>, TClass*> && ...)
 class factory_map final
 {
 public:
@@ -254,12 +256,11 @@ public:
    ///
    /// <see cref="key_delegates_functions::invoke"/>
    ///
-   /// <returns>An instance of the class.<returns>
-   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   /// <returns>An owning pointer, or nullptr if the key or delegate is missing.</returns>
    ///
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
-   auto make(const key_type& key,
-             TParameters&&... parameters) const
+   TClass* make(const key_type& key,
+                TParameters&&... parameters) const
    {
       return _delegates_map.template
                invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
@@ -272,8 +273,8 @@ public:
    /// </summary>
    ///
    template<typename... TParameters>
-   auto make(const key_type& key,
-             TParameters&&... parameters) const
+   TClass* make(const key_type& key,
+                TParameters&&... parameters) const
    {
       return _delegates_map
              .invoke_optional(key, std::forward<TParameters>(parameters)...)
@@ -287,16 +288,53 @@ public:
    ///
    /// <see cref="key_delegates_functions::invoke"/>
    ///
-   /// <returns>An instance of the class.<returns>
-   /// <returns>nullptr_t when the given key cannot be found.<returns>
+   /// <returns>An owning pointer, or nullptr if the key or delegate is missing.</returns>
    ///
    template<size_t TIndex, typename... TParameters>
-   auto make(const key_type& key,
-             TParameters&&... parameters) const
+   TClass* make(const key_type& key,
+                TParameters&&... parameters) const
    {
       return _delegates_map.template
                invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)
                .value_or(nullptr);
+   }
+
+   /// <summary>Constructs an instance with unique ownership.</summary>
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   std::unique_ptr<TClass> make_unique(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::unique_ptr<TClass>{ make<TInvocable>(key, std::forward<TParameters>(parameters)...) };
+   }
+
+   template<typename... TParameters>
+   std::unique_ptr<TClass> make_unique(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::unique_ptr<TClass>{ make(key, std::forward<TParameters>(parameters)...) };
+   }
+
+   template<size_t TIndex, typename... TParameters>
+   std::unique_ptr<TClass> make_unique(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::unique_ptr<TClass>{ make<TIndex>(key, std::forward<TParameters>(parameters)...) };
+   }
+
+   /// <summary>Constructs an instance with shared ownership.</summary>
+   template<concepts::invocable::Invocable TInvocable, typename... TParameters>
+   std::shared_ptr<TClass> make_shared(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::shared_ptr<TClass>{ std::unique_ptr<TClass>{ make<TInvocable>(key, std::forward<TParameters>(parameters)...) } };
+   }
+
+   template<typename... TParameters>
+   std::shared_ptr<TClass> make_shared(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::shared_ptr<TClass>{ std::unique_ptr<TClass>{ make(key, std::forward<TParameters>(parameters)...) } };
+   }
+
+   template<size_t TIndex, typename... TParameters>
+   std::shared_ptr<TClass> make_shared(const key_type& key, TParameters&&... parameters) const
+   {
+      return std::shared_ptr<TClass>{ std::unique_ptr<TClass>{ make<TIndex>(key, std::forward<TParameters>(parameters)...) } };
    }
 
    ///

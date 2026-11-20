@@ -21,27 +21,27 @@ void test_constructors(const nike::shoe_factory& factory,
    std::cout << "----------  Constructing using templated signatures.  -------------\n";
 
    std::cout << "Base signature.\n";
-   run_shoe_tests(factory.make<std::unique_ptr<nike::shoe> ()>(key));
+   run_shoe_tests(factory.make_unique<nike::shoe* ()>(key));
 
    std::cout << "\nConstruct using numerics signature.\n";
-   run_shoe_tests(factory.make<std::unique_ptr<nike::shoe> (int, float)>(key, 5, 5.0f));
+   run_shoe_tests(factory.make_unique<nike::shoe* (int, float)>(key, 5, 5.0f));
 
    std::cout << "----------  Constructing using implicit signatures.  -------------\n";
 
    std::cout << "Base signature.\n";
-   run_shoe_tests(factory.make(key));
+   run_shoe_tests(factory.make_unique(key));
 
    std::cout << "\nConstruct using numerics signature.\n";
-   run_shoe_tests(factory.make(key, 5, 5.0f));
+   run_shoe_tests(factory.make_unique(key, 5, 5.0f));
 
 
    std::cout << "\n----------  Constructing using tuples.  --------------\n";
 
    std::cout << "Tuple<0>\n";
-   run_shoe_tests(factory.make<0>(key));
+   run_shoe_tests(factory.make_unique<0>(key));
 
    std::cout << "\nTuple<1>\n";
-   run_shoe_tests(factory.make<1>(key, 5, 5.0f));
+   run_shoe_tests(factory.make_unique<1>(key, 5, 5.0f));
 }
 
 void test_factory(nike::shoe_factory& factory,

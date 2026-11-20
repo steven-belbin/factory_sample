@@ -46,10 +46,11 @@ auto apply_optional(InvocableCanBeEmptyWithResult auto&& invocable,
 ///
 template<typename... TParameters>
 auto invoke_optional(InvocableCanBeEmptyWithResult auto&& invocable,
-                     const TParameters&... parameters)
+                     TParameters&&... parameters)
 {
    return (invocable)
-        ? std::make_optional(std::invoke(std::forward<decltype(invocable)>(invocable), parameters...))
+        ? std::make_optional(std::invoke(std::forward<decltype(invocable)>(invocable),
+                                         std::forward<TParameters>(parameters)...))
         : std::nullopt;
 }
 }

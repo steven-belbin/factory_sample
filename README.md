@@ -29,7 +29,13 @@ Usage (typical flow)
 3. Register functors with the factory (or configure which functor to use at runtime).
 4. Request construction from the factory; the chosen functor is invoked to produce the object.
 
-Example (conceptual)
+`factory_map<T, Key, T*(), T*(Args...)>` requires each registered signature to
+return `T*`. `make` returns the owning raw pointer (or `nullptr` when the key
+or selected callable is missing); the caller must delete it. `make_unique` and
+`make_shared` wrap `make` in the corresponding smart pointer. All three support
+selection by inferred arguments, explicit signature, or signature index.
+Registered callables must return pointers suitable for deletion through `T*`
+(for polymorphic products, `T` should have a virtual destructor).
 
 Samples
 - See `action_sample/delegate_static_assertions.cpp` for examples of lambdas, std::function aliases, and compile-time static_assert checks validating sets of callables.
