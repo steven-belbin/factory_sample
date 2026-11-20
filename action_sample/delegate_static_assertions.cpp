@@ -1,6 +1,7 @@
 #include <prgrmr/delegate.hpp>
 #include <prgrmr/delegates.hpp>
 #include <prgrmr/delegates_map.hpp>
+#include <prgrmr/factory.hpp>
 #include <prgrmr/factory_map.hpp>
 #include <prgrmr/concepts/concepts.hpp>
 #include <cassert>
@@ -141,6 +142,52 @@ void test_factory_map()
         assert(s != nullptr && s->value == 84);
         auto s2 = shared_factory.make_shared("active");
         assert(s2 != nullptr && s2->value == 84);
+    }
+
+    // Test standalone factory (keyless)
+    {
+        prgrmr::factory<factory_product, default_signature, argument_signature> standalone_factory;
+        assert(standalone_factory.make() == nullptr);
+        assert(!standalone_factory.make_unique());
+        assert(standalone_factory.make_shared().use_count() == 0);
+
+        // Reset with individual lambdas
+        standalone_factory.reset(
+            [&destroyed]() { return new factory_product(10, destroyed); },
+            [&destroyed](int value, int& ref) { ref += value; return new factory_product(value, destroyed); }
+        );
+        auto p1 = standalone_factory.make();
+        assert(p1 != nullptr && p1->value == 10);
+        delete p1;
+
+        auto u1 = standalone_factory.make_unique();
+        assert(u1 != nullptr && u1->value == 10);
+
+        auto s1 = standalone_factory.make_shared();
+        assert(s1 != nullptr && s1->value == 10);
+
+        int arg = 5;
+        auto u2 = standalone_factory.make_unique(3, arg);
+        assert(u2 != nullptr && u2->value == 3 && arg == 8);
+
+        // Register factory into factory_map via factory_map::reset(key, factory&&)
+        factory_map<factory_product, std::string, default_signature, argument_signature> map_from_factory;
+        map_from_factory.reset("standalone", std::move(standalone_factory));
+        auto u3 = map_from_factory.make_unique("standalone");
+        assert(u3 != nullptr && u3->value == 10);
+
+        // Test get and at
+        assert(map_from_factory.get("standalone") != nullptr);
+        assert(map_from_factory.get("nonexistent") == nullptr);
+        assert(map_from_factory.at("standalone").make_unique()->value == 10);
+        try
+        {
+            map_from_factory.at("nonexistent");
+            assert(false);
+        }
+        catch (const std::out_of_range&)
+        {
+        }
     }
 }
 

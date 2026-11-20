@@ -1,23 +1,25 @@
 #pragma once
 
-#include "./delegates_map.hpp"
+#include "./factory.hpp"
 #include "./concepts/arguments.hpp"
 #include "./concepts/invocable.hpp"
 #include <cstddef>
 #include <memory>
+#include <unordered_map>
+#include <utility>
 
 namespace prgrmr
 {
 ///
 /// <summary>
-///   A collection of factories that are associated by key.
+///   A collection of factories_map that are associated by key.
 ///
 ///   Allows applications at runtime to provide a key & configure
 ///   that key's factory so that application logic can create the
 ///   appropriate instance that matches key.
 /// </summary>
 ///
-/// <seealso cref="delegates_map"/>
+/// <seealso cref="factory"/>
 ///
 template<typename TClass, typename TKey, concepts::invocable::Invocable... TInvocables>
 requires concepts::arguments::IsNotEmpty<TInvocables...> &&
@@ -29,47 +31,37 @@ requires concepts::arguments::IsNotEmpty<TInvocables...> &&
 class factory_map final
 {
 public:
-   using delegates_map_type = delegates_map<TKey, TInvocables...>;
-   using delegates_type = delegates_map_type::delegates_type;
-   using key_type = delegates_map_type::key_type;
+   using key_type = TKey;
+   using factory_type = factory<TClass, TInvocables...>;
+   using factories_map_type = std::unordered_map<key_type, factory_type>;
+   using delegates_type = typename factory_type::delegates_type;
    using result_type = concepts::invocable::invocables_result_type<TInvocables...>;
 
    factory_map() = default;
-   factory_map(const factory_map&) = default;
+   factory_map(const factory_map&) = delete;
    factory_map(factory_map&&) = default;
 
    ~factory_map() = default;
 
-   /// <summary>
-   ///   Constructs a factory_map.
-   /// </summary>
-   ///
-   /// <param name="delegate">The delegates.</param>
-   ///
-   explicit factory_map(const delegates_map_type& delegates)
-   : _delegates_map{ delegates }
-   {
-   }
+   factory_map& operator=(const factory_map&) = delete;
+   factory_map& operator=(factory_map&&) = default;
 
    /// <summary>
-   ///   Constructs a factory_map.
+   ///   Constructs a factory_map from an existing map of factories_map.
    /// </summary>
-   ///
-   /// <param name="delegate">The delegates.</param>
-   ///
-   explicit factory_map(delegates_map_type&& delegates)
-   : _delegates_map{ std::forward<delegates_map_type>(delegates) }
+   explicit factory_map(factories_map_type&& factories_map)
+   : _factories_map{ std::move(factories_map) }
    {
    }
 
    ///
    /// <summary>
-   ///   Clears all delegates from the map.
+   ///   Clears all factories_map from the map.
    /// </summary>
    ///
    void clear()
    {
-      _delegates_map.clear();
+      _factories_map.clear();
    }
 
    ///
@@ -79,7 +71,7 @@ public:
    ///
    auto empty() const
    {
-      return _delegates_map.empty();
+      return _factories_map.empty();
    }
 
    ///
@@ -89,12 +81,84 @@ public:
    ///
    auto size() const
    {
-      return _delegates_map.size();
+      return _factories_map.size();
    }
 
    ///
    /// <summary>
-   ///   Registers all the delegate under the given key.
+   ///   Get a pointer to the factory associated with the given key, or nullptr if not found.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching factory.</param>
+   ///
+   const factory_type* get(const key_type& key) const noexcept
+   {
+      const auto iter = _factories_map.find(key);
+
+      return (iter != std::end(_factories_map))
+           ? std::addressof(iter->second)
+           : nullptr;
+   }
+
+   ///
+   /// <summary>
+   ///   Get a pointer to the factory associated with the given key, or nullptr if not found.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching factory.</param>
+   ///
+   factory_type* get(const key_type& key) noexcept
+   {
+      const auto iter = _factories_map.find(key);
+
+      return (iter != std::end(_factories_map))
+           ? std::addressof(iter->second)
+           : nullptr;
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to the factory associated with the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching factory.</param>
+   /// <exception cref="std::out_of_range">When there is no factory registered with the given key.</exception>
+   ///
+   const factory_type& at(const key_type& key) const
+   {
+      return _factories_map.at(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Get a reference to the factory associated with the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The key to locate the matching factory.</param>
+   /// <exception cref="std::out_of_range">When there is no factory registered with the given key.</exception>
+   ///
+   factory_type& at(const key_type& key)
+   {
+      return _factories_map.at(key);
+   }
+
+   ///
+   /// <summary>
+   ///   Registers a factory under the given key.
+   /// </summary>
+   ///
+   /// <param name="key">The unique identifying key to associate with the factory.</param>
+   /// <param name="factory">The factory to register.</param>
+   ///
+   void reset(const key_type& key,
+              factory_type&& factory)
+   {
+      _factories_map.insert_or_assign(key, std::move(factory));
+   }
+
+   ///
+   /// <summary>
+   ///   Registers all the delegates under the given key.
    /// </summary>
    ///
    /// <param name="key">The unique identifying key to associate with the delegate.</param>
@@ -103,7 +167,7 @@ public:
    void reset(const key_type& key,
               delegates_type&& delegates)
    {
-      _delegates_map.reset(key, std::move(delegates));
+      _factories_map[key].reset(std::move(delegates));
    }
 
    ///
@@ -116,11 +180,12 @@ public:
    ///
    template<concepts::invocable::Invocable... TOtherInvocables>
    requires concepts::arguments::IsNotEmpty<TOtherInvocables...> &&
-            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>)
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, delegates_type>) &&
+            (!std::same_as<std::remove_cvref_t<std::tuple_element_t<0, std::tuple<TOtherInvocables...>>>, factory_type>)
    void reset(const key_type& key,
               TOtherInvocables&&... invocables)
    {
-      _delegates_map.reset(key, std::forward<TOtherInvocables>(invocables)...);
+      _factories_map[key].reset(std::forward<TOtherInvocables>(invocables)...);
    }
 
    ///
@@ -133,11 +198,12 @@ public:
    ///
    template<concepts::invocable::Invocable TOtherInvocable>
    requires (!std::same_as<std::remove_cvref_t<TOtherInvocable>, std::nullptr_t> &&
-             !std::same_as<std::remove_cvref_t<TOtherInvocable>, delegates_type>)
+             !std::same_as<std::remove_cvref_t<TOtherInvocable>, delegates_type> &&
+             !std::same_as<std::remove_cvref_t<TOtherInvocable>, factory_type>)
    void reset(const key_type& key,
               TOtherInvocable&& invocable)
    {
-      _delegates_map.reset(key, std::forward<TOtherInvocable>(invocable));
+      _factories_map[key].reset(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -153,7 +219,7 @@ public:
    void reset(const key_type& key,
               std::tuple<TOtherInvocables...>&& invocables_tuple)
    {
-      _delegates_map.reset(key, std::move(invocables_tuple));
+      _factories_map[key].reset(std::move(invocables_tuple));
    }
 
    template<concepts::invocable::Invocable... TOtherInvocables>
@@ -161,7 +227,7 @@ public:
    void reset(const key_type& key,
               const std::tuple<TOtherInvocables...>& invocables_tuple)
    {
-      _delegates_map.reset(key, invocables_tuple);
+      _factories_map[key].reset(invocables_tuple);
    }
 
    ///
@@ -177,8 +243,7 @@ public:
    void reset(const key_type& key,
               TOtherInvocable&& invocable)
    {
-      _delegates_map.template
-        reset<TIndex>(key, std::forward<TOtherInvocable>(invocable));
+      _factories_map[key].template reset<TIndex>(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -191,7 +256,10 @@ public:
    void reset(const key_type& key,
               std::nullptr_t = nullptr)
    {
-      _delegates_map.reset(key, nullptr);
+      if (auto* factory = get(key); factory != nullptr)
+      {
+         factory->reset();
+      }
    }
 
    ///
@@ -203,7 +271,7 @@ public:
    ///
    void erase(const key_type& key)
    {
-      _delegates_map.erase(key);
+      _factories_map.erase(key);
    }
 
    ///
@@ -219,8 +287,7 @@ public:
    void reset(const key_type& key,
               TOtherInvocable&& invocable)
    {
-      _delegates_map.template
-        reset<TInvocable>(key, std::forward<TOtherInvocable>(invocable));
+      _factories_map[key].template reset<TInvocable>(std::forward<TOtherInvocable>(invocable));
    }
 
    ///
@@ -234,8 +301,10 @@ public:
    void reset(const key_type& key,
               std::nullptr_t = nullptr)
    {
-      _delegates_map.template
-        reset<TInvocable>(key, nullptr);
+      if (auto* factory = get(key); factory != nullptr)
+      {
+         factory->template reset<TInvocable>(nullptr);
+      }
    }
 
    ///
@@ -249,16 +318,16 @@ public:
    void reset(const key_type& key,
               std::nullptr_t = nullptr)
    {
-      _delegates_map.template
-        reset<TIndex>(key, nullptr);
+      if (auto* factory = get(key); factory != nullptr)
+      {
+         factory->template reset<TIndex>(nullptr);
+      }
    }
 
    ///
    /// <summary>
-   ///   Constructs an instance of the class.
+   ///   Constructs an instance using the specified delegate signature.
    /// </summary>
-   ///
-   /// <see cref="key_delegates_functions::invoke"/>
    ///
    /// <returns>The constructed instance, or a default-constructed result if the key or delegate is missing.</returns>
    ///
@@ -266,9 +335,11 @@ public:
    auto make(const key_type& key,
              TParameters&&... parameters) const
    {
-      return _delegates_map.template
-               invoke_optional<TInvocable>(key, std::forward<TParameters>(parameters)...)
-               .value_or(result_type{});
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make<TInvocable>(std::forward<TParameters>(parameters)...)
+           : result_type{};
    }
 
    ///
@@ -280,17 +351,17 @@ public:
    auto make(const key_type& key,
              TParameters&&... parameters) const
    {
-      return _delegates_map
-             .invoke_optional(key, std::forward<TParameters>(parameters)...)
-             .value_or(result_type{});
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->make(std::forward<TParameters>(parameters)...)
+           : result_type{};
    }
 
    ///
    /// <summary>
-   ///   Constructs an instance of the class.
+   ///   Constructs an instance using the delegate at the specified index.
    /// </summary>
-   ///
-   /// <see cref="key_delegates_functions::invoke"/>
    ///
    /// <returns>The constructed instance, or a default-constructed result if the key or delegate is missing.</returns>
    ///
@@ -298,47 +369,73 @@ public:
    auto make(const key_type& key,
              TParameters&&... parameters) const
    {
-      return _delegates_map.template
-               invoke_optional<TIndex>(key, std::forward<TParameters>(parameters)...)
-               .value_or(result_type{});
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make<TIndex>(std::forward<TParameters>(parameters)...)
+           : result_type{};
    }
 
    /// <summary>Constructs an instance with unique ownership.</summary>
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
    auto make_unique(const key_type& key, TParameters&&... parameters) const
    {
-      return to_unique(make<TInvocable>(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make_unique<TInvocable>(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    template<typename... TParameters>
    auto make_unique(const key_type& key, TParameters&&... parameters) const
    {
-      return to_unique(make(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->make_unique(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    template<size_t TIndex, typename... TParameters>
    auto make_unique(const key_type& key, TParameters&&... parameters) const
    {
-      return to_unique(make<TIndex>(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make_unique<TIndex>(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    /// <summary>Constructs an instance with shared ownership.</summary>
    template<concepts::invocable::Invocable TInvocable, typename... TParameters>
    auto make_shared(const key_type& key, TParameters&&... parameters) const
    {
-      return to_shared(make<TInvocable>(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make_shared<TInvocable>(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    template<typename... TParameters>
    auto make_shared(const key_type& key, TParameters&&... parameters) const
    {
-      return to_shared(make(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->make_shared(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    template<size_t TIndex, typename... TParameters>
    auto make_shared(const key_type& key, TParameters&&... parameters) const
    {
-      return to_shared(make<TIndex>(key, std::forward<TParameters>(parameters)...));
+      const auto* factory = get(key);
+
+      return factory != nullptr
+           ? factory->template make_shared<TIndex>(std::forward<TParameters>(parameters)...)
+           : nullptr;
    }
 
    ///
@@ -348,46 +445,13 @@ public:
    ///
    /// <param name="other">The reference to swap contents with.</param>
    ///
-   void swap(factory_map& other)
+   void swap(factory_map& other) noexcept
    {
-      _delegates_map.swap(other._delegates_map);
+      _factories_map.swap(other._factories_map);
    }
 
 private:
-   static auto to_unique(auto instance)
-   {
-      using instance_type = decltype(instance);
-
-      if constexpr (std::same_as<instance_type, std::unique_ptr<TClass>>)
-      {
-         return instance;
-      }
-      else
-      {
-         return std::unique_ptr<TClass>{ instance };
-      }
-   }
-
-   static auto to_shared(auto instance)
-   {
-      using instance_type = decltype(instance);
-
-      if constexpr (std::same_as<instance_type, std::shared_ptr<TClass>>)
-      {
-         return instance;
-      }
-      else if constexpr (std::same_as<instance_type, std::unique_ptr<TClass>>)
-      {
-         return std::shared_ptr<TClass>{ std::move(instance) };
-      }
-      else
-      {
-         return (instance != nullptr)
-              ? std::shared_ptr<TClass>{ instance }
-              : nullptr;
-      }
-   }
-
-   delegates_map_type _delegates_map;
+   factories_map_type _factories_map;
 };
 }
+
